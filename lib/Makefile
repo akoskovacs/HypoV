@@ -1,1 +1,1 @@
-
+lib-y += print.o
