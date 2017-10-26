@@ -163,6 +163,7 @@ include $(srctree)/scripts/Kbuild.include
 AS		= $(CROSS_COMPILE)as
 LD		= $(CROSS_COMPILE)ld
 CC		= $(CROSS_COMPILE)gcc
+NASM    = $(CROSS_COMPILE)nasm
 CPP		= $(CC) -E
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -173,7 +174,7 @@ AWK		= awk
 INSTALLHVISOR  := installkernel
 PERL		= perl
 
-CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
+CHECKFLAGS     := -D__HypoV__ -Dhypov -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
 CFLAGS_HVISOR	=
 AFLAGS_HVISOR	=
@@ -201,7 +202,7 @@ HVISORRELEASE = $(shell cat include/config/kernel.release 2> /dev/null)
 HVISORVERSION = $(VERSION)$(if $(PATCHLEVEL),.$(PATCHLEVEL)$(if $(SUBLEVEL),.$(SUBLEVEL)))$(EXTRAVERSION)
 
 export ARCH SRCARCH CONFIG_SHELL HOSTCC HOSTCFLAGS CROSS_COMPILE AS LD CC
-export CPP AR NM STRIP OBJCOPY OBJDUMP
+export CPP AR NM STRIP OBJCOPY OBJDUMP NASM
 export MAKE AWK GENKSYMS INSTALLHVISOR PERL UTS_MACHINE
 export HOSTCXX HOSTCXXFLAGS
 
@@ -329,8 +330,7 @@ endif # $(dot-config)
 # command line.
 
 all: hypov
-objs-y		:= boot
-objs-y		:= kernel
+objs-y		:= kernel boot
 libs-y		:= lib
 
 hypov-dirs	:= $(objs-y) $(libs-y)
@@ -436,8 +436,6 @@ quiet_cmd_rmfiles = $(if $(wildcard $(rm-files)),CLEAN   $(wildcard $(rm-files))
 # Usage:
 # $(Q)$(MAKE) $(clean)=dir
 clean := -f $(if $(KBUILD_SRC),$(srctree)/)scripts/Makefile.clean obj
-
-
 
 help:
 	@echo  'Cleaning targets:'
