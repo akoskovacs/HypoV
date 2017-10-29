@@ -17,6 +17,10 @@
 
 #include <basic.h>
 
+#define FAT32_SIG0 0x28
+#define FAT32_SIG1 0x29
+#define FAT32_BOOTCODE_SIZE 422
+
 struct __packed Fat32_ParameterBlock {
 
 };
@@ -57,7 +61,7 @@ struct __packed Fat32_ExtBootSector {
 struct __packed Fat32_Sector0 {
     struct Fat32_BootSector    s_boot;
     struct Fat32_ExtBootSector s_ext_boot;
-    uint8_t                    s_boot_code[422]; // The boot code, including the BIOS signature
+    uint8_t                    s_boot_code[FAT32_BOOTCODE_SIZE]; // The boot code, including the BIOS signature
 };
 
 struct Fat32_Fs {
