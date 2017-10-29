@@ -220,12 +220,17 @@ RCS_FIND_IGNORE := \( -name SCCS -o -name BitKeeper -o -name .svn -o -name CVS -
 # Rules shared between *config targets and build targets
 
 # Basic helpers built in scripts/
-PHONY += scripts_basic
+PHONY += scripts_basic install_stage0
 scripts_basic:
 	$(Q)$(MAKE) $(build)=scripts/basic
 
 # To avoid any implicit rule to kick in, define an empty command.
 scripts/basic/%: scripts_basic ;
+
+install_stage0:
+	$(Q)$(MAKE) $(build)=scripts/install_stage0
+
+scripts/install_stage0/%: scripts_basic ;
 
 PHONY += outputmakefile
 # outputmakefile generates a Makefile in the output directory, if using a
@@ -325,12 +330,15 @@ else
 include/config/auto.conf: ;
 endif # $(dot-config)
 
+loader:
+	$(call if_changed,loader)
+	$(Q)$(MAKE) -C stage0
 
 # The all: target is the default when no target is given on the
 # command line.
 
-all: hypov
-objs-y		:= kernel boot
+all: hypov loader
+objs-y		:= sys boot
 libs-y		:= lib
 
 hypov-dirs	:= $(objs-y) $(libs-y)
