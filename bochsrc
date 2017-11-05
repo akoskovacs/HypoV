@@ -1,2 +1,16 @@
-floppya: 1_44=/boot/loader, status=inserted
-boot: floppy
+# Use a modern CPU model with virtualization
+cpu: model=corei7_ivy_bridge_3770k, ips=120000000
+clock: sync=slowdown
+megs: 128
+
+# Graphical debugger
+display_library: x, options="gui_debug"
+
+# Break on xchg bx, bx instruction
+magic_break: enabled=1
+
+# Hard disks.
+ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
+ata0-master: type=disk, path="testfs.img" #, cylinders=406, heads=8, spt=63
+
+boot: disk

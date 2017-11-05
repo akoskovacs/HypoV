@@ -34,6 +34,8 @@ align 4
 
 ; The entry point for the multiboot bootloader
 hv_multiboot_entry:
+; Bochs breakpoint
+    xchg bx, bx
 ; The stack grows down from the reserved area
     mov esp, hv_stack+HV_STACK_SIZE
     mov ebp, esp

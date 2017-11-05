@@ -176,6 +176,9 @@ OBJDUMP		= $(CROSS_COMPILE)objdump
 AWK		= awk
 INSTALLHVISOR  := installkernel
 PERL		= perl
+QEMU32	= qemu-system-i386
+QEMU64	= qemu-system-x86_64
+BOCHS   = bochs
 
 CHECKFLAGS     := -D__HypoV__ -Dhypov -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
@@ -362,10 +365,17 @@ hypov-all	:= $(hypov-objs) $(hypov-libs)
 # relevant sections renamed as per the linker script.
 quiet_cmd_hypov = LD      $@
       cmd_hypov = $(CC) $(LDFLAGS) -o hypov.bin \
-      -Wl,--start-group $(hypov-libs) $(hypov-objs) -Wl,--end-group -Wl,-Tboot/linker.ld $(SHARED_FLAGS) 
+      -Wl,--start-group $(hypov-libs) $(hypov-objs) -Wl,--end-group \
+	  -Wl,-Tboot/linker.ld $(SHARED_FLAGS)
 
 hypov: $(hypov-all)
 	$(call if_changed,hypov)
+
+qemu: hypov
+	$(Q)$(QEMU32) -hda testfs.img
+
+bochs: hypov
+	$(Q)$(BOCHS)
 
 # The actual objects are generated when descending, 
 # make sure no implicit rule kicks in
