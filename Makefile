@@ -7,6 +7,9 @@
 # o  print "Entering directory ...";
 MAKEFLAGS += -rR --no-print-directory
 
+SHARED_FLAGS := -m32 -std=c99 -nostdinc -fno-builtin -fno-stack-protector -fno-unwind-tables
+SHARED_FLAGS += -fno-asynchronous-unwind-tables -ffreestanding -Wl,-melf_i386 -march=i586
+SHARED_FLAGS += -nostartfiles -nodefaultlibs -nostdlib -static
 
 # To put more focus on warnings, be less verbose as default
 # Use 'make V=1' to see the full commands
@@ -204,7 +207,7 @@ HVISORVERSION = $(VERSION)$(if $(PATCHLEVEL),.$(PATCHLEVEL)$(if $(SUBLEVEL),.$(S
 export ARCH SRCARCH CONFIG_SHELL HOSTCC HOSTCFLAGS CROSS_COMPILE AS LD CC
 export CPP AR NM STRIP OBJCOPY OBJDUMP NASM
 export MAKE AWK GENKSYMS INSTALLHVISOR PERL UTS_MACHINE
-export HOSTCXX HOSTCXXFLAGS
+export HOSTCXX HOSTCXXFLAGS SHARED_FLAGS
 
 export KBUILD_CPPFLAGS NOSTDINC_FLAGS LINUXINCLUDE OBJCOPYFLAGS LDFLAGS
 export KBUILD_CFLAGS CFLAGS_HVISOR
@@ -220,7 +223,7 @@ RCS_FIND_IGNORE := \( -name SCCS -o -name BitKeeper -o -name .svn -o -name CVS -
 # Rules shared between *config targets and build targets
 
 # Basic helpers built in scripts/
-PHONY += scripts_basic install_stage0
+PHONY += scripts_basic install_stage0 fat32_read
 scripts_basic:
 	$(Q)$(MAKE) $(build)=scripts/basic
 
@@ -229,6 +232,9 @@ scripts/basic/%: scripts_basic ;
 
 install_stage0:
 	$(Q)$(MAKE) $(build)=scripts/install_stage0
+
+fat32_read:
+	$(Q)$(MAKE) $(build)=scripts/fat32_read
 
 scripts/install_stage0/%: scripts_basic ;
 
@@ -295,11 +301,11 @@ ifeq ($(config-targets),1)
 export KBUILD_DEFCONFIG KBUILD_KCONFIG
 
 config: scripts_basic outputmakefile FORCE
-#	$(Q)mkdir -p include/linux include/config
+	$(Q)mkdir -p include/config # include/linux 
 	$(Q)$(MAKE) $(build)=scripts/kconfig $@
 
 %config: scripts_basic outputmakefile FORCE
-#	$(Q)mkdir -p include/linux include/config
+	$(Q)mkdir -p include/config # include/linux 
 	$(Q)$(MAKE) $(build)=scripts/kconfig $@
 
 else
@@ -330,12 +336,18 @@ else
 include/config/auto.conf: ;
 endif # $(dot-config)
 
-loader:
-	$(call if_changed,loader)
+stage0/stage0: stage0/stage0.asm
 	$(Q)$(MAKE) -C stage0
+
+loader: stage0/stage0
 
 # The all: target is the default when no target is given on the
 # command line.
+
+# CFLAGS += -m32
+#LDFLAGS += -T boot/linker.ld
+#LDFLAGS += -melf32_x86_64
+# LDFLAGS += -melf_i386
 
 all: hypov loader
 objs-y		:= sys boot
@@ -349,8 +361,8 @@ hypov-all	:= $(hypov-objs) $(hypov-libs)
 # Do modpost on a prelinked vmlinux. The finally linked vmlinux has
 # relevant sections renamed as per the linker script.
 quiet_cmd_hypov = LD      $@
-      cmd_hypov = $(CC) $(LDFLAGS) -o $@                          \
-      -Wl,--start-group $(hypov-libs) $(hypov-objs) -Wl,--end-group
+      cmd_hypov = $(CC) $(LDFLAGS) -o hypov.bin \
+      -Wl,--start-group $(hypov-libs) $(hypov-objs) -Wl,--end-group -Wl,-Tboot/linker.ld $(SHARED_FLAGS) 
 
 hypov: $(hypov-all)
 	$(call if_changed,hypov)
@@ -379,7 +391,7 @@ $(hypov-dirs): scripts_basic
 # make distclean Remove editor backup files, patch leftover files and the like
 
 # Directories & files removed with 'make clean'
-CLEAN_DIRS  +=
+CLEAN_DIRS  += 
 CLEAN_FILES +=	hypov
 
 # Directories & files removed with 'make mrproper'

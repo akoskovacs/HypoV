@@ -132,6 +132,12 @@ __build: $(builtin-target) $(lib-target) $(extra-y) $(subdir-ym) $(always)
 # Compile C sources (.c)
 # ---------------------------------------------------------------------------
 
+
+SHARED_FLAGS := -m32 -std=c99 -nostdinc -fno-builtin -fno-stack-protector -fno-unwind-tables
+SHARED_FLAGS += -fno-asynchronous-unwind-tables -ffreestanding -Wl,-melf_i386 -march=i586
+SHARED_FLAGS += -nostartfiles -nodefaultlibs -nostdlib -static
+KBUILD_CFLAGS_KERNEL += $(SHARED_FLAGS)
+
 # Default is built-in, unless we know otherwise
 modkern_cflags = $(KBUILD_CFLAGS_KERNEL) $(CFLAGS_KERNEL)
 quiet_modtag := $(empty)   $(empty)
