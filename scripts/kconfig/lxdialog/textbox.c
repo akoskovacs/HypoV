@@ -322,6 +322,7 @@ static void print_line(WINDOW * win, int row, int width)
 {
 	int y, x;
 	char *line;
+    y = x = 0;
 
 	line = get_line();
 	line += MIN(strlen(line), hscroll);	/* Scroll horizontally */
