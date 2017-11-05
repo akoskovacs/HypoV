@@ -1,1 +1,1 @@
-obj-y += loader.o
+obj-y += entry.o
