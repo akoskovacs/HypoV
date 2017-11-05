@@ -135,9 +135,9 @@ fat32_is_valid(struct StageInstaller *hdl)
 
     /* Some say, you can't depend on the FAT32 ID string, but I still don't
         really like if it's not what we expect */
-    is_fat32 = strncmp(fs_type, fat32_id, sizeof(fat32_id)) == 0;
-    is_fat32 = is_fat32 && (sec->s_ext_boot.es_signature == FAT32_SIG0) 
-                        || (sec->s_ext_boot.es_signature == FAT32_SIG1);
+    is_fat32 = (strncmp(fs_type, fat32_id, sizeof(fat32_id)) == 0)
+            && ((sec->s_ext_boot.es_signature == FAT32_SIG0) 
+            || (sec->s_ext_boot.es_signature == FAT32_SIG1));
     /* NOTE: The jump codes are not verified, but will be overwritten. */ 
 
     if (is_debug_on) {
@@ -200,7 +200,7 @@ install_loader(struct StageInstaller *hdl)
     return success == false; /* Mind == blown */
 }
 
-int main(int argc, const char *argv[])
+int main(int argc, char * const argv[])
 {
     int opt;
     struct StageInstaller hdl;
