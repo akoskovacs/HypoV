@@ -61,7 +61,7 @@ struct __packed MultiBootInfo {
     uint32_t cmdline;
     uint32_t mods_count;
     uint32_t mods_addr;
-    struct   multiboot_elf_section elf_sec;
+    struct   MultiBootElfSection elf_sec;
     uint32_t mmap_length;
     uint32_t mmap_addr;
     uint32_t drives_length;

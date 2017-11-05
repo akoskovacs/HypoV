@@ -34,6 +34,7 @@
 #define __align(A) __attribute__((aligned(A)))
 #define __weak __attribute__((weak))
 #define __naked __attribute__((naked))
+#define __noreturn __attribute__((noreturn))
 
 /* Section macros for initcalls */
 /*

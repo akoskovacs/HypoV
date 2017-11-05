@@ -8,6 +8,8 @@
 #ifndef HYPERVISOR_H
 #define HYPERVISOR_H
 
-void hv_entry(void);
+struct MultiBootInfo;
+
+void hv_entry(struct MultiBootInfo *, unsigned int);
 
 #endif // HYPERVISOR_H

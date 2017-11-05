@@ -1,11 +1,13 @@
 ; +------------------------------------------------------------+
 ; | Copyright (C) Kovács Ákos - 2017                           |
 ; |                                                            |
-; | First code linked to the main binary (32-bit code)         |
+; | The multiboot header and entry point for the bootloader    |
 ; +------------------------------------------------------------+
 
 global hv_multiboot_entry
 extern hv_entry
+
+%define HV_STACK_SIZE 4096 ; 4Kb stack
 
 ; Multiboot definitions
 %define MB_ALIGN        0x001
@@ -29,6 +31,19 @@ dq 0 ; Mode type
 
 bits 32
 align 4
+
+; The entry point for the multiboot bootloader
 hv_multiboot_entry:
+; The stack grows down from the reserved area
+    mov esp, hv_stack+HV_STACK_SIZE
+    mov ebp, esp
+; Push the arguments for the C function
+    push eax
+    push ebx
+; Call the 32 bit C entry function in sys/init.c
+; hv_entry(struct MultiBootInfo *, int magic)
     call hv_entry
     jmp $
+
+section .bss
+hv_stack: resb HV_STACK_SIZE
