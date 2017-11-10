@@ -34,7 +34,7 @@ typedef enum {
     FG_COLOR_MAGENTA = FG_COLOR_RED | FG_COLOR_BLUE,
     FG_COLOR_BROWN   = FG_COLOR_RED | FG_COLOR_GREEN,
     FG_COLOR_WHITE   = FG_COLOR_RED | FG_COLOR_GREEN | FG_COLOR_BLUE,
-    FG_COLOR_BLACK   = 0x00,
+    FG_COLOR_BLACK   = 0x00
 } console_attr_t;
 
 typedef uint16_t console_font_t;
@@ -61,13 +61,13 @@ struct ConsoleDisplay {
     int                   pv_y;
 };
 
-int            hv_hv_console_setup(struct CharacterDisplay *disp);
+int            hv_console_setup(struct CharacterDisplay *disp);
 int            hv_console_set_attribute(struct ConsoleDisplay *m, console_attr_t attr);
 console_attr_t hv_console_get_attribute(struct ConsoleDisplay *m);
 int            hv_console_clear(struct CharacterDisplay *disp);
 
 int hv_console_putc_xya(struct CharacterDisplay *cdisp, int x, int y, console_attr_t attr, char ch);
-int hv_console_putc_xya(struct CharacterDisplay *cdisp, int x, int y, console_attr_t attr, char ch);
+int hv_console_putc_xy(struct CharacterDisplay *cdisp, int x, int y, char ch);
 
 
 #endif // PC_CONSOLE_H

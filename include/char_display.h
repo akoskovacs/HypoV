@@ -19,6 +19,7 @@ enum HV_CDISP_ERROR {
 /* Function typedefs for each callback handler */
 typedef int (*hv_cdisp_setup_ft)(struct CharacterDisplay *);
 typedef int (*hv_cdisp_clear_ft)(struct CharacterDisplay *);
+typedef int (*hv_cdisp_get_xy_ft)(struct CharacterDisplay *, int *x, int *y);
 typedef int (*hv_cdisp_putc_ft)(struct CharacterDisplay *, char c);
 typedef int (*hv_cdisp_putc_xy_ft)(struct CharacterDisplay *, int x, int y, char c);
 
@@ -30,6 +31,8 @@ struct ChacterDisplay {
     const char         *disp_name;
     hv_cdisp_setup_ft   disp_setup;
     hv_cdisp_clear_ft   disp_clear;
+    hv_cdisp_get_xy_ft  disp_get_max_xy;
+    hv_cdisp_get_xy_ft  disp_get_xy;
     hv_cdisp_putc_xy_ft disp_putc_xy;
     hv_cdisp_putc_ft    disp_putc;
 };
