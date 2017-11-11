@@ -179,6 +179,9 @@ PERL		= perl
 QEMU32	= qemu-system-i386
 QEMU64	= qemu-system-x86_64
 BOCHS   = bochs
+CHECK_MBOOT = grub-file --is-x86-multiboot
+
+MAPFILE = HypoV.map
 
 CHECKFLAGS     := -D__HypoV__ -Dhypov -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
@@ -361,15 +364,15 @@ hypov-objs	:= $(patsubst %,%/built-in.o, $(objs-y))
 hypov-libs	:= $(patsubst %,%/lib.a, $(libs-y))
 hypov-all	:= $(hypov-objs) $(hypov-libs)
 
-# Do modpost on a prelinked vmlinux. The finally linked vmlinux has
-# relevant sections renamed as per the linker script.
 quiet_cmd_hypov = LD      $@
       cmd_hypov = $(CC) $(LDFLAGS) -o hypov.bin \
       -Wl,--start-group $(hypov-libs) $(hypov-objs) -Wl,--end-group \
-	  -Wl,-Tboot/linker.ld $(SHARED_FLAGS)
+	  -Wl,-Tboot/linker.ld $(SHARED_FLAGS) -Wl,-Map $(MAPFILE)
 
 hypov: $(hypov-all)
 	$(call if_changed,hypov)
+	@echo -n "  [Multiboot "
+	$(Q)$(CHECK_MBOOT) $@.bin && echo "OK]" || echo "FAIL]"
 
 qemu: hypov
 	$(Q)$(QEMU32) -hda testfs.img
