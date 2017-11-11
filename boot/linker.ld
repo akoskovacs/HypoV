@@ -8,51 +8,44 @@
 OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
 OUTPUT_ARCH(i386)
 ENTRY (hv_multiboot_entry)
-page_size = 4096;
-hhalf = 0;
+/* page_size = 4096;
+hhalf = 0; */
 
 SECTIONS
 {
     /* This stage the paging is still not enabled.
      * (physical = virtual)
+     *  . = 0x00100000;
      */
-    . = 0x00100000;
-    .multiboot_header :
-    {
-/*    __start_multiboot_header = .;
-        boot/entry.o */
-/*    __end_multiboot_header = .; */
-    }
 
-    .text : AT(ADDR(.text) - hhalf)
+    . = 1M;
+    .multiboot BLOCK(4K) : ALIGN(4K)
     {
-/*    __start_cs_init = .; */
-        *(.init.text)
-/*    __end_cs_init = .; */
+        *(.multiboot.header)
+        *(.multiboot.text)
+    }
+    
+    .text BLOCK(4K) : ALIGN(4K)
+    {
         *(.text)
     }
-
-    .rodata ALIGN(page_size) : AT(ADDR(.rodata) - hhalf)
+    
+    .rodata BLOCK(4K) : ALIGN(4K)
     {
-/*    __start_data_kernel = .; */
-        *(.rodata*)
+        *(.rodata)
     }
 
-    .data ALIGN(page_size) : AT(ADDR(.data) - hhalf)
+    .data BLOCK(4K) : ALIGN(4K)
     {
         *(.data)
     }
 
-    .bss ALIGN(page_size) : AT(ADDR(.bss) - hhalf)
+    .bss BLOCK(4K) : ALIGN(4K)
     {
-/*        sbss = .; */
-        *(COMMON)
+        *(.COMMON)
         *(.bss)
-/*       ebss = .;
-    __end_data_kernel = .; */
     }
-
-    .note ALIGN(page_size) : AT(ADDR(.note) - hhalf)
+    .note ALIGN(4K) :
     {
         *(.note.gnu.build-id)
     }
