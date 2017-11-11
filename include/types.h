@@ -9,6 +9,7 @@
 #define TYPES_H
 
 /* Only valid for 64 bit GCCs */
+#ifdef __HVISOR__
 
 typedef unsigned long size_t;
 typedef unsigned long long off_t;
@@ -24,5 +25,6 @@ typedef signed int int32_t;
 typedef signed long long int64_t;
 
 typedef enum { false, true } bool;
+#endif
 
 #endif // TYPES_H
