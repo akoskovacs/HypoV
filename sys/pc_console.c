@@ -16,7 +16,7 @@ static void print_spaces(struct ConsoleDisplay *, int, int, int);
 
 int hv_console_display_init(struct ConsoleDisplay *m) {
     if (m == NULL) {
-        return -HV_CDISP_ENODISP;
+        return -HV_ENODISP;
     }
 
     m->pv_base.disp_name        = CONSOLE_DEVICE_NAME;
@@ -58,7 +58,7 @@ int hv_console_putc_xya(struct CharacterDisplay *cdisp
     console_font_t font = 0;
 
     if (x > CONSOLE_LAST_COLUMN(disp) || y > CONSOLE_LAST_ROW(disp)) {
-        return -HV_CDISP_ETOOLONG;
+        return -HV_ETOOLONG;
     }
 
     switch (ch) {
@@ -172,7 +172,7 @@ int hv_console_get_xy(struct CharacterDisplay *this, int *x, int *y)
             *y = disp->pv_y;
         }
     } else {
-        return -HV_CDISP_BADARG;
+        return -HV_BADARG;
     }
     return 0;
 }
@@ -190,7 +190,7 @@ int hv_console_get_max_xy(struct CharacterDisplay *this, int *x, int *y)
             *y = disp->pv_height - 1;
         }
     } else {
-        return -HV_CDISP_BADARG;
+        return -HV_BADARG;
     }
     return 0;
 }

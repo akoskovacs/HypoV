@@ -13,7 +13,7 @@ struct CharacterDisplay *stdout = NULL;
 
 #define CDISP_CHECK_THIS(this)       \
     if ((this == NULL)) {            \
-        return -HV_CDISP_ENODISP;    \
+        return -HV_ENODISP;    \
     }                          
 
 #define CDISP_CALL_FUNCTION(fname, ...)        \
@@ -24,7 +24,7 @@ int hv_disp_setup(struct CharacterDisplay *this)
     if (this->disp_setup) {
         return this->disp_setup(this);
     }
-    return -HV_CDISP_ENOIMPL;
+    return -HV_ENOIMPL;
 }
 
 int hv_disp_clear(struct CharacterDisplay *this)
@@ -33,7 +33,7 @@ int hv_disp_clear(struct CharacterDisplay *this)
     if (this->disp_clear) {
         return this->disp_clear(this);
     }
-    return -HV_CDISP_ENOIMPL;
+    return -HV_ENOIMPL;
 }
 
 int hv_disp_get_xy(struct CharacterDisplay *this, int *x, int *y)
@@ -42,7 +42,7 @@ int hv_disp_get_xy(struct CharacterDisplay *this, int *x, int *y)
     if (this->disp_get_xy) {
         return this->disp_get_xy(this, x, y);
     }
-    return -HV_CDISP_ENOIMPL;
+    return -HV_ENOIMPL;
 }
 
 int hv_disp_get_max_xy(struct CharacterDisplay *this, int *x, int *y)
@@ -51,7 +51,7 @@ int hv_disp_get_max_xy(struct CharacterDisplay *this, int *x, int *y)
     if (this->disp_get_max_xy) {
         return this->disp_get_max_xy(this, x, y);
     }
-    return -HV_CDISP_ENOIMPL;
+    return -HV_ENOIMPL;
 }
 
 int hv_disp_putc(struct CharacterDisplay *this, char ch)
@@ -60,7 +60,7 @@ int hv_disp_putc(struct CharacterDisplay *this, char ch)
     if (this->disp_putc) {
         return this->disp_putc(this, ch);
     }
-    return -HV_CDISP_ENOIMPL;
+    return -HV_ENOIMPL;
 }
 
 int hv_disp_putc_xy(struct CharacterDisplay *this, int x, int y, char ch)
@@ -69,7 +69,7 @@ int hv_disp_putc_xy(struct CharacterDisplay *this, int x, int y, char ch)
     if (this->disp_putc_xy) {
         return this->disp_putc_xy(this, x, y, ch);
     }
-    return -HV_CDISP_ENOIMPL;
+    return -HV_ENOIMPL;
 }
 
 int hv_disp_puts_xy(struct CharacterDisplay *this, int x, int y, const char *line)
@@ -79,7 +79,7 @@ int hv_disp_puts_xy(struct CharacterDisplay *this, int x, int y, const char *lin
 
     CDISP_CHECK_THIS(this);
     if (this->disp_putc_xy == NULL) {
-        return -HV_CDISP_ENOIMPL;
+        return -HV_ENOIMPL;
     }
 
     for (i = 0; i < size; i++) {
@@ -98,7 +98,7 @@ int hv_disp_puts(struct CharacterDisplay *this, const char *line)
     size_t size = strlen(line);
     CDISP_CHECK_THIS(this);
     if (this->disp_putc_xy == NULL) {
-        return -HV_CDISP_ENOIMPL;
+        return -HV_ENOIMPL;
     }
     for (i = 0; i < size; i++) {
         r = this->disp_putc(this, line[i]);

@@ -9,13 +9,7 @@
 #define CHAR_DISPLAY_H
 
 #include <basic.h>
-
-enum HV_CDISP_ERROR {
-    HV_CDISP_ENODISP = 1, // No display, or NULL
-    HV_CDISP_ENOIMPL,     // Function not implemented
-    HV_CDISP_BADARG,      // Bad argument for the function
-    HV_CDISP_ETOOLONG     // Coordinates are out of scope
-};
+#include <error.h>
 
 struct CharacterDisplay;
 
