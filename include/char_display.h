@@ -13,42 +13,51 @@
 enum HV_CDISP_ERROR {
     HV_CDISP_ENODISP = 1, // No display, or NULL
     HV_CDISP_ENOIMPL,     // Function not implemented
+    HV_CDISP_BADARG,      // Bad argument for the function
     HV_CDISP_ETOOLONG     // Coordinates are out of scope
 };
 
+struct CharacterDisplay;
+
 /* Function typedefs for each callback handler */
-typedef int (*hv_cdisp_setup_ft)(struct CharacterDisplay *);
-typedef int (*hv_cdisp_clear_ft)(struct CharacterDisplay *);
-typedef int (*hv_cdisp_get_xy_ft)(struct CharacterDisplay *, int *x, int *y);
-typedef int (*hv_cdisp_putc_ft)(struct CharacterDisplay *, char c);
-typedef int (*hv_cdisp_putc_xy_ft)(struct CharacterDisplay *, int x, int y, char c);
+typedef int (*hv_disp_setup_ft)(struct CharacterDisplay *);
+typedef int (*hv_disp_clear_ft)(struct CharacterDisplay *);
+typedef int (*hv_disp_get_xy_ft)(struct CharacterDisplay *, int *x, int *y);
+typedef int (*hv_disp_putc_ft)(struct CharacterDisplay *, char c);
+typedef int (*hv_disp_putc_xy_ft)(struct CharacterDisplay *, int x, int y, char c);
 
 /* 
  * Must be encapsulated as the first variable in each implementor
  * structure
 */
-struct ChacterDisplay {
+struct CharacterDisplay {
     const char         *disp_name;
-    hv_cdisp_setup_ft   disp_setup;
-    hv_cdisp_clear_ft   disp_clear;
-    hv_cdisp_get_xy_ft  disp_get_max_xy;
-    hv_cdisp_get_xy_ft  disp_get_xy;
-    hv_cdisp_putc_xy_ft disp_putc_xy;
-    hv_cdisp_putc_ft    disp_putc;
+    hv_disp_setup_ft   disp_setup;
+    hv_disp_clear_ft   disp_clear;
+    hv_disp_get_xy_ft  disp_get_max_xy;
+    hv_disp_get_xy_ft  disp_get_xy;
+    hv_disp_putc_xy_ft disp_putc_xy;
+    hv_disp_putc_ft    disp_putc;
 };
 
-struct ChacterDisplay *stdout = NULL;
+extern struct CharacterDisplay *stdout;
 
 /* Top-level functions */
-hv_cdisp_setup_ft    hv_cdisp_setup;
-hv_cdisp_clear_ft    hv_cdisp_clear;
-hv_cdisp_putc_ft     hv_cdisp_putc;
-hv_cdisp_putc_xy_ft  hv_cdisp_putc_xy;
+int hv_disp_setup(struct CharacterDisplay *this);
+int hv_disp_clear(struct CharacterDisplay *this);
+int hv_disp_get_xy(struct CharacterDisplay *this, int *x, int *y);
+int hv_disp_get_max_xy(struct CharacterDisplay *this, int *x, int *y);
+int hv_disp_putc(struct CharacterDisplay *this, char ch);
+int hv_disp_putc_xy(struct CharacterDisplay *this, int x, int y, char ch);
+int hv_disp_puts_xy(struct CharacterDisplay *this, int x, int y, const char *line);
+int hv_disp_puts(struct CharacterDisplay *this, const char *line);
 
 int hv_cdisp_puts(struct CharacterDisplay *disp, const char *str);
 
-#define putchar(ch)         hv_char_display_putc(stdout, (ch))
-#define fputc(ch, disp)     hv_char_display_putc((disp), (ch))
-#define fputs(str, disp)    hv_cdisp_puts((disp), (str))
+#define putchar(ch)         hv_disp_putc(stdout, (ch))
+#define puts(str)           hv_disp_puts(stdout, (str))
+#define fputc(ch, disp)     hv_disp_putc((disp), (ch))
+#define fputs(str, disp)    hv_disp_puts((disp), (str))
+#define hv_set_stdout(disp) (stdout = (struct CharacterDisplay *)(disp))
 
 #endif // CHAR_DISPLAY_H
