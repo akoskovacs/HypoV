@@ -1,8 +1,11 @@
-; +------------------------------------------------------------+
-; | Copyright (C) Kovács Ákos - 2017                           |
-; |                                                            |
-; | The multiboot header and entry point for the bootloader    |
-; +------------------------------------------------------------+
+; +---------------------------------------------------------------------+
+; | Copyright (C) Kovács Ákos - 2017                                    |
+; |                                                                     |
+; | The multiboot header and entry point for the bootloader             |
+; |                                                                     |
+; | Multiboot specification:                                            |
+; |   https://www.gnu.org/software/grub/manual/multiboot/multiboot.html |
+; +---------------------------------------------------------------------+
 
 global hv_multiboot_entry
 global hv_multiboot_header
