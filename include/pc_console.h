@@ -47,27 +47,38 @@ typedef uint16_t console_font_t;
 # define CONSOLE_DEFAULT_TABSIZE 4
 #endif // CONSOLE_DEFAULT_TABSIZE
 
-#define VIDEORAM_BASE_ADDRESS   (console_font_t *)0xb8000
+#define PC_VIDEORAM_BASE_ADDRESS   (console_font_t *)0xb8000
 
 /* struct VideoMemory : public CharacterDisplay */
 struct ConsoleDisplay {
-    struct ChacterDisplay pv_base;
-    console_font_t       *pv_base_addr;
-    console_attr_t        pv_attr;
-    short int             pv_tabsize;
-    int                   pv_width;
-    int                   pv_height;
-    int                   pv_x;
-    int                   pv_y;
+    struct CharacterDisplay  pv_base;
+    volatile console_font_t *pv_base_addr;
+    console_attr_t           pv_attr;
+    short int                pv_tabsize;
+    int                      pv_width;
+    int                      pv_height;
+    int                      pv_x;
+    int                      pv_y;
 };
 
-int            hv_console_setup(struct CharacterDisplay *disp);
-int            hv_console_set_attribute(struct ConsoleDisplay *m, console_attr_t attr);
-console_attr_t hv_console_get_attribute(struct ConsoleDisplay *m);
-int            hv_console_clear(struct CharacterDisplay *disp);
+int hv_console_display_init(struct ConsoleDisplay *m);
+
+/* Inherited functions from CharacterDisplay */
+int hv_console_setup(struct CharacterDisplay *disp);
+int hv_console_clear(struct CharacterDisplay *disp);
+int hv_console_get_xy(struct CharacterDisplay *disp, int *x, int *y);
+int hv_console_get_max_xy(struct CharacterDisplay *disp, int *x, int *y);
 
 int hv_console_putc_xya(struct CharacterDisplay *cdisp, int x, int y, console_attr_t attr, char ch);
 int hv_console_putc_xy(struct CharacterDisplay *cdisp, int x, int y, char ch);
+int hv_console_putc(struct CharacterDisplay *cdisp, char ch);
 
+
+/* ConsoleDisplay's own functions */
+int            hv_console_set_attribute(struct ConsoleDisplay *m, console_attr_t attr);
+console_attr_t hv_console_get_attribute(struct ConsoleDisplay *m);
+int            hv_console_puts_xya(struct ConsoleDisplay *m, int x, int y, console_attr_t attr, const char *line);
+void           hv_console_scroll_up(struct ConsoleDisplay *m, int count);
+void           hv_console_scroll_down(struct ConsoleDisplay *m, int count);
 
 #endif // PC_CONSOLE_H
