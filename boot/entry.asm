@@ -13,10 +13,10 @@ extern hv_entry
 ; Multiboot definitions
 %define MB_ALIGN        0x001
 %define MB_MEMINFO      0x002
-%define MB_FLAGS        MB_ALIGN | MB_MEMINFO
+%define MB_FLAGS        (MB_ALIGN | MB_MEMINFO)
 
-%define MB_MAGIC        0x1BAD002
-%define MB_CHECKSUM     -(MB_MAGIC + MB_FLAGS)
+%define MB_MAGIC        0x1BADB002
+%define MB_CHECKSUM     ~(MB_MAGIC + MB_FLAGS)+1
 
 ; Multiboot header start
 align 4
@@ -39,6 +39,9 @@ align 4
 hv_multiboot_entry:
 ; Bochs breakpoint
     xchg bx, bx
+; Reset EFLAGS
+    push 0
+    popf
 ; The stack grows down from the reserved area
     mov esp, hv_stack+HV_STACK_SIZE
     mov ebp, esp

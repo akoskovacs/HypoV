@@ -17,16 +17,16 @@ SECTIONS
      * (physical = virtual)
      *  . = 0x00100000;
      */
-
-    . = 1M;
-    .multiboot BLOCK(4K) : ALIGN(4K)
+    . = 0x1000;
+    .multiboot : AT(0x1000)
     {
         *(.multiboot.header)
-        *(.multiboot.text)
     }
-    
+
+    . = 1M;
     .text BLOCK(4K) : ALIGN(4K)
     {
+        *(.multiboot.text)
         *(.text)
     }
     
