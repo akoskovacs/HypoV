@@ -12,8 +12,6 @@
 #include <string.h>
 #include <types.h>
 
-static void print_spaces(struct ConsoleDisplay *, int, int, int);
-
 int hv_console_display_init(struct ConsoleDisplay *m) {
     if (m == NULL) {
         return -HV_ENODISP;
@@ -46,7 +44,7 @@ int hv_console_setup(struct CharacterDisplay *disp)
 int hv_console_clear(struct CharacterDisplay *cdisp)
 {
     struct ConsoleDisplay *disp = (struct ConsoleDisplay *)cdisp;
-    print_spaces(disp, 0, 0, disp->pv_width * disp->pv_height);
+    hv_console_fill_line(disp, 0, 0, disp->pv_width * disp->pv_height);
     return 0;
 }
 
@@ -71,7 +69,7 @@ int hv_console_putc_xya(struct CharacterDisplay *cdisp
         return 0;
 
         case '\t':
-            print_spaces(disp, x, y, disp->pv_tabsize);
+            hv_console_fill_line(disp, x, y, disp->pv_tabsize);
         return 0;
     }
 
@@ -142,7 +140,7 @@ void hv_console_scroll_up(struct ConsoleDisplay *this, int count)
    }
    this->pv_y = this->pv_height - 1;
    this->pv_x = 0;
-   print_spaces(this, this->pv_x, this->pv_y, this->pv_width);
+   hv_console_fill_line(this, this->pv_x, this->pv_y, this->pv_width);
 }
 
 void hv_console_scroll_down(struct ConsoleDisplay *this, int count)
@@ -156,7 +154,7 @@ void hv_console_scroll_down(struct ConsoleDisplay *this, int count)
    }
    this->pv_y = 0;
    this->pv_x = 0;
-   print_spaces(this, this->pv_x, this->pv_y, this->pv_width);
+   hv_console_fill_line(this, this->pv_x, this->pv_y, this->pv_width);
 }
 
 int hv_console_get_xy(struct CharacterDisplay *this, int *x, int *y)
@@ -195,7 +193,7 @@ int hv_console_get_max_xy(struct CharacterDisplay *this, int *x, int *y)
     return 0;
 }
 
-void print_spaces(struct ConsoleDisplay *this, int x, int y, int count)
+void hv_console_fill_line(struct ConsoleDisplay *this, int x, int y, int count)
 {
    while (count) {
        if (x > this->pv_width - 1) {
