@@ -9,23 +9,24 @@
 #include <boot/multiboot.h>
 #include <types.h>
 #include <hypervisor.h>
+#include <pc_console.h>
 
 volatile uint16_t *videomem = (uint16_t *)0xb8000;
 #define CONSOLE_WIDTH  80
 #define CONSOLE_HEIGHT 25
 
-void __noreturn 
-hv_entry(struct MultiBootInfo *mbi, unsigned int magic)
+struct ConsoleDisplay main_display;
+
+void __noreturn hv_entry(struct MultiBootInfo *mbi, unsigned int magic)
 {
     int i;
-    const char hw[] = "HypoV - Copyright (C) Akos Kovacs";
-    for (i = 0; i < CONSOLE_HEIGHT*CONSOLE_WIDTH; i++) {
-        videomem[i] = ((0x47) << 8);
-    }
+    const char hw[] = "HypoV Hypervisor - Copyright (C) Akos Kovacs";
 
-    for (i = 0; i < sizeof(hw); i++) {
-        videomem[i] = (0x47 << 8) | hw[i];
-    }
+    hv_console_display_init(&main_display);
+    hv_disp_clear((struct CharacterDisplay *)&main_display);
+    hv_set_stdout(&main_display);
+
+    puts(hw);
 
     while (1) 
         ;
