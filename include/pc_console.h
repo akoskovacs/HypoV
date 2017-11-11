@@ -15,7 +15,17 @@
 #define CONFIG_CONSOLE_HEIGHT 25
 #define CONSOLE_LAST_COLUMN(disp)   ((disp)->pv_width - 1)
 #define CONSOLE_LAST_ROW(disp)      ((disp)->pv_height - 1)
+#define CONSOLE_WIDTH(disp)         ((disp)->pv_width)
+#define CONSOLE_HEIGHT(disp)        ((disp)->pv_height)
 
+#define hv_console_set_x(disp, v)   ((disp)->pv_x = (v))
+#define hv_console_set_y(disp, v)   ((disp)->pv_y = (v))
+
+#define hv_console_set_xy(disp, x, y) do { (disp)->pv_x = (x); \
+                                           (disp)->pv_y = (y); } while (0)
+
+#define hv_console_set_attribute(disp, attr) \
+                                    ((disp)->pv_attr = (attr))
 typedef enum {
     LIGHT            = 0x08,
     BLINK            = 0x80,
@@ -75,10 +85,10 @@ int hv_console_putc(struct CharacterDisplay *cdisp, char ch);
 
 
 /* ConsoleDisplay's own functions */
-int            hv_console_set_attribute(struct ConsoleDisplay *m, console_attr_t attr);
 console_attr_t hv_console_get_attribute(struct ConsoleDisplay *m);
 int            hv_console_puts_xya(struct ConsoleDisplay *m, int x, int y, console_attr_t attr, const char *line);
 void           hv_console_scroll_up(struct ConsoleDisplay *m, int count);
 void           hv_console_scroll_down(struct ConsoleDisplay *m, int count);
+void           hv_console_fill_line(struct ConsoleDisplay *m, int x, int y, int count);
 
 #endif // PC_CONSOLE_H
