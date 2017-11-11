@@ -375,6 +375,9 @@ hypov: $(hypov-all)
 	$(Q)$(CHECK_MBOOT) $@.bin && echo "OK]" || echo "FAIL]"
 
 qemu: hypov
+	$(Q)$(QEMU32) -kernel hypov.bin
+
+qemufs: hypov
 	$(Q)$(QEMU32) -hda testfs.img
 
 bochs: hypov
