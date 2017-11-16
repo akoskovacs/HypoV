@@ -9,7 +9,7 @@
 #include <boot/multiboot.h>
 #include <types.h>
 #include <hypervisor.h>
-#include <pc_console.h>
+#include <drivers/video/pc_console.h>
 #include <debug_console.h>
 
 struct ConsoleDisplay main_display;
@@ -31,6 +31,5 @@ void __noreturn hv_entry(struct MultiBootInfo *mbi, unsigned int magic)
     hv_set_stdout(disp);
     dc_start(&main_display);
 
-    while (1) 
-        ;
+    keyboard_loop(dc_keyboard_handler);
 }

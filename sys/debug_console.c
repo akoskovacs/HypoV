@@ -6,6 +6,7 @@
  * +---------------------------------------------------------------------+
 */
 
+#include <drivers/input/pc_keyboard.h>
 #include <debug_console.h>
 #include <error.h>
 
@@ -28,10 +29,11 @@ DECL_HANDLER_PROTOTYPES(guest);
 
 static struct ConsoleDisplay *current_display = NULL;
 static struct DebugScreen ds_screen[] = {
-    { DS_F1, "CPU", "Physical CPU information", dc_cpu_info_show, dc_cpu_handle_key },
-    { DS_F2, "MEMORY", "System memory-mapping information", dc_mem_info_show, dc_mem_handle_key },
-    { DS_F3, "DISK", "Boot partition listings", dc_disk_info_show, dc_disk_handle_key },
-    { DS_F4, "VM", "Guest virtualization OS management", dc_cpu_info_show, dc_cpu_handle_key },
+    { DS_F1, "VMM", "This Virtual Machine Manager's functions", dc_cpu_info_show, dc_cpu_handle_key },
+    { DS_F2, "CPU", "Physical CPU information", dc_cpu_info_show, dc_cpu_handle_key },
+    { DS_F3, "MEMORY", "System memory-mapping information", dc_mem_info_show, dc_mem_handle_key },
+    { DS_F4, "DISK", "Boot partition listings", dc_disk_info_show, dc_disk_handle_key },
+    { DS_F5, "VM", "Guest virtualization OS management", dc_cpu_info_show, dc_cpu_handle_key },
 };
 #define NR_SCREENS (sizeof(ds_screen)/sizeof(struct DebugScreen))
 
@@ -43,7 +45,7 @@ int dc_start(struct ConsoleDisplay *disp)
     current_display = disp;
     hv_console_clear(disp);
     /* Display the first screen */
-    return dc_show_screen(ds_screen);
+    return dc_show_screen(ds_screen+1);
 }
 
 int dc_show_screen(struct DebugScreen *scr)
@@ -58,6 +60,7 @@ int dc_show_screen(struct DebugScreen *scr)
 
 int dc_top_menu_draw(struct DebugScreen *scr)
 {
+    const char branding[] = " HypoV ";
     char sw_tmpl[] = " F1 - ";
     struct DebugScreen *scrs = ds_screen;
     int i;
@@ -80,13 +83,16 @@ int dc_top_menu_draw(struct DebugScreen *scr)
     }
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_BROWN);
     hv_console_fill_line(current_display, current_display->pv_x, 0, CONSOLE_WIDTH(current_display)-current_display->pv_x);
+    hv_console_set_xy(current_display, CONSOLE_WIDTH(current_display)-sizeof(branding), 0);
+    hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_BROWN | LIGHT);
+    hv_disp_puts((struct CharacterDisplay *)current_display, branding);
     return 0;
 }
 
 int dc_bottom_menu_draw(struct DebugScreen *scr)
 {
     int i;
-    const char copyright[] = "HypoV - Copyright (C) Akos Kovacs ";
+    const char copyright[] = "Copyright (C) Akos Kovacs ";
     int x = CONSOLE_WIDTH(current_display) - sizeof(copyright);
 
     hv_console_set_xy(current_display, 1, CONSOLE_LAST_ROW(current_display));
@@ -97,6 +103,22 @@ int dc_bottom_menu_draw(struct DebugScreen *scr)
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_BROWN);
     hv_disp_puts((struct CharacterDisplay *)current_display, copyright);
     return 0;
+}
+
+void dc_keyboard_handler(uint8_t scancode)
+{
+    switch (scancode) {
+        case KEY_F1:
+        dc_show_screen(ds_screen);
+        break;
+
+        case KEY_F2:
+        dc_show_screen(ds_screen+1);
+        break;
+
+
+
+    }
 }
 
 static int dc_cpu_info_show(struct DebugScreen *scr)

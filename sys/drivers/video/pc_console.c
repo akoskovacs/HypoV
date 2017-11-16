@@ -8,7 +8,7 @@
 
 #include <basic.h>
 #include <char_display.h>
-#include <pc_console.h>
+#include <drivers/video/pc_console.h>
 #include <string.h>
 #include <types.h>
 
@@ -54,6 +54,10 @@ int hv_console_putc_xya(struct CharacterDisplay *cdisp
 {
     struct ConsoleDisplay *disp = (struct ConsoleDisplay *)cdisp;
     console_font_t font = 0;
+
+    if (x < 0 || y < 0) {
+        return -HV_BADARG;
+    }
 
     if (x > CONSOLE_LAST_COLUMN(disp) || y > CONSOLE_LAST_ROW(disp)) {
         return -HV_ETOOLONG;
