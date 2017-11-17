@@ -9,6 +9,7 @@
 #include <basic.h>
 #include <char_display.h>
 #include <drivers/video/pc_console.h>
+#include <system.h>
 #include <string.h>
 #include <types.h>
 
@@ -210,6 +211,11 @@ void hv_console_fill_line(struct ConsoleDisplay *this, int x, int y, int count)
    }
 }
 
+void hv_console_cursor_disable(void)
+{
+    outb(0x3D4, 0x0A);
+    outb(0x3D5, 0x20);
+}
 
 // TODO
 #if 0

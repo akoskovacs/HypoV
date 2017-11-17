@@ -90,5 +90,6 @@ int            hv_console_puts_xya(struct ConsoleDisplay *m, int x, int y, conso
 void           hv_console_scroll_up(struct ConsoleDisplay *m, int count);
 void           hv_console_scroll_down(struct ConsoleDisplay *m, int count);
 void           hv_console_fill_line(struct ConsoleDisplay *m, int x, int y, int count);
+void           hv_console_cursor_disable(void);
 
 #endif // PC_CONSOLE_H

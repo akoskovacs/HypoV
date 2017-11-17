@@ -10,6 +10,7 @@
 #include <types.h>
 #include <hypervisor.h>
 #include <drivers/video/pc_console.h>
+#include <drivers/input/pc_keyboard.h>
 #include <debug_console.h>
 
 struct ConsoleDisplay main_display;
@@ -26,7 +27,7 @@ void __noreturn hv_entry(struct MultiBootInfo *mbi, unsigned int magic)
 
     puts(hw);
 #endif 
-
+    hv_console_cursor_disable();
     hv_console_display_init(&main_display);
     hv_set_stdout(disp);
     dc_start(&main_display);
