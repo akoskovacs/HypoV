@@ -1,0 +1,119 @@
+Archive member included to satisfy reference by file (symbol)
+
+lib/lib.a(string.o)           sys/built-in.o (strlen)
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+START GROUP
+LOAD lib/lib.a
+LOAD sys/built-in.o
+LOAD boot/built-in.o
+END GROUP
+                0x0000000000001000                . = 0x1000
+
+.multiboot      0x0000000000001000       0x24
+ *(.multiboot.header)
+ .multiboot     0x0000000000001000       0x24 boot/built-in.o
+                0x0000000000100000                . = 0x100000
+
+.text           0x0000000000100000     0x3047
+ *(.multiboot.text)
+ *(.text)
+ .text          0x0000000000100000     0x2098 sys/built-in.o
+                0x000000000010003f                keyboard_set_keymap
+                0x0000000000100082                keyboard_scancode_for
+                0x000000000010009e                keyboard_get_scancode
+                0x00000000001000cf                keyboard_read
+                0x0000000000100113                sys_reboot
+                0x0000000000100157                keyboard_loop
+                0x000000000010101d                hv_console_display_init
+                0x00000000001010c3                hv_console_setup
+                0x00000000001010d9                hv_console_clear
+                0x000000000010110b                hv_console_putc_xya
+                0x00000000001011ee                hv_console_putc_xy
+                0x0000000000101222                hv_console_putc
+                0x00000000001013b5                hv_console_scroll_up
+                0x0000000000101458                hv_console_scroll_down
+                0x00000000001014ed                hv_console_get_xy
+                0x000000000010154c                hv_console_get_max_xy
+                0x00000000001015b1                hv_console_fill_line
+                0x00000000001015f1                hv_console_cursor_disable
+                0x0000000000101615                hv_entry
+                0x000000000010165d                hv_disp_setup
+                0x0000000000101694                hv_disp_clear
+                0x00000000001016cb                hv_disp_get_xy
+                0x0000000000101708                hv_disp_get_max_xy
+                0x0000000000101745                hv_disp_putc
+                0x0000000000101787                hv_disp_putc_xy
+                0x00000000001017cc                hv_disp_puts_xy
+                0x0000000000101853                hv_disp_puts
+                0x00000000001018d5                dc_start
+                0x0000000000101903                dc_show_screen
+                0x0000000000101956                dc_top_menu_draw
+                0x0000000000101af7                dc_bottom_menu_draw
+                0x0000000000101c2e                dc_keyboard_handler
+                0x0000000000101fe5                cpuid_get_branding
+                0x0000000000102039                cpuid_get_vendor
+ *fill*         0x0000000000102098      0xf68 
+ .text          0x0000000000103000       0x16 boot/built-in.o
+                0x0000000000103000                hv_multiboot_entry
+ .text          0x0000000000103016       0x31 lib/lib.a(string.o)
+                0x0000000000103016                strlen
+
+.iplt           0x0000000000103050        0x0
+ .iplt          0x0000000000103050        0x0 sys/built-in.o
+
+.rodata         0x0000000000104000     0x1177
+ *(.rodata)
+ .rodata        0x0000000000104000     0x1177 sys/built-in.o
+                0x0000000000104000                kbd_hu_keymap
+                0x0000000000104040                kbd_hu_spec_keys
+
+.data           0x0000000000106000     0x1084
+ *(.data)
+ .data          0x0000000000106000     0x1084 sys/built-in.o
+                0x0000000000107000                disp
+ .data          0x0000000000107084        0x0 lib/lib.a(string.o)
+
+.igot.plt       0x0000000000107084        0x0
+ .igot.plt      0x0000000000107084        0x0 sys/built-in.o
+
+.bss            0x0000000000108000     0x3000
+ *(.COMMON)
+ *(.bss)
+ .bss           0x0000000000108000     0x109c sys/built-in.o
+                0x0000000000109000                main_display
+                0x0000000000109038                stdout
+                0x0000000000109040                vendor
+                0x0000000000109060                branding
+                0x0000000000109094                branding_start
+ *fill*         0x000000000010909c      0xf64 
+ .bss           0x000000000010a000     0x1000 boot/built-in.o
+ .bss           0x000000000010b000        0x0 lib/lib.a(string.o)
+
+.note           0x000000000010b000       0x24
+ *(.note.gnu.build-id)
+ .note.gnu.build-id
+                0x000000000010b000       0x24 sys/built-in.o
+OUTPUT(hypov.bin elf32-i386)
+
+.rel.dyn        0x000000000010b024        0x0
+ .rel.iplt      0x000000000010b024        0x0 sys/built-in.o
+ .rel.text      0x000000000010b024        0x0 sys/built-in.o
+
+.comment        0x0000000000000000       0x34
+ .comment       0x0000000000000000       0x34 sys/built-in.o
+                                        0x13e (size before relaxing)
+ .comment       0x0000000000000034       0x35 lib/lib.a(string.o)
+
+.note.GNU-stack
+                0x0000000000000000        0x0
+ .note.GNU-stack
+                0x0000000000000000        0x0 sys/built-in.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 lib/lib.a(string.o)
