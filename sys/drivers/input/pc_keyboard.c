@@ -1,3 +1,10 @@
+/*
+ * +------------------------------------------------------------+
+ * | Copyright (C) Ákos Kovács - 2017                           |
+ * |                                                            |
+ * | Polling PC keyboard driver                                 |
+ * +------------------------------------------------------------+
+*/
 #include <string.h>
 #include <system.h>
 #include <drivers/input/pc_keyboard.h>
