@@ -22,6 +22,7 @@ enum DC_KEYS {
     static int dc_##scrname##_info_show(struct DebugScreen *);       \
     static int dc_##scrname##_handle_key(struct DebugScreen *, int)  \
 
+DECL_HANDLER_PROTOTYPES(vmm);
 DECL_HANDLER_PROTOTYPES(cpu);
 DECL_HANDLER_PROTOTYPES(mem);
 DECL_HANDLER_PROTOTYPES(disk);
@@ -29,7 +30,7 @@ DECL_HANDLER_PROTOTYPES(guest);
 
 static struct ConsoleDisplay *current_display = NULL;
 static struct DebugScreen ds_screen[] = {
-    { DS_F1, "VMM", "This Virtual Machine Manager's functions", dc_cpu_info_show, dc_cpu_handle_key },
+    { DS_F1, "VMM", "This Virtual Machine Manager's functions", dc_vmm_info_show, dc_vmm_handle_key },
     { DS_F2, "CPU", "Physical CPU information", dc_cpu_info_show, dc_cpu_handle_key },
     { DS_F3, "MEMORY", "System memory-mapping information", dc_mem_info_show, dc_mem_handle_key },
     { DS_F4, "DISK", "Boot partition listings", dc_disk_info_show, dc_disk_handle_key },
@@ -43,7 +44,6 @@ int dc_start(struct ConsoleDisplay *disp)
         return -HV_ENODISP;
     }
     current_display = disp;
-    hv_console_clear(disp);
     /* Display the first screen */
     return dc_show_screen(ds_screen+1);
 }
@@ -53,6 +53,7 @@ int dc_show_screen(struct DebugScreen *scr)
     if (scr == NULL) {
         return -HV_ENODISP;
     }
+    hv_console_clear(current_display);
     dc_top_menu_draw(scr);
     dc_bottom_menu_draw(scr);
     return scr->dc_draw_handler(scr);
@@ -105,7 +106,7 @@ int dc_bottom_menu_draw(struct DebugScreen *scr)
     return 0;
 }
 
-void dc_keyboard_handler(uint8_t scancode)
+int dc_keyboard_handler(char scancode)
 {
     switch (scancode) {
         case KEY_F1:
@@ -116,9 +117,38 @@ void dc_keyboard_handler(uint8_t scancode)
         dc_show_screen(ds_screen+1);
         break;
 
+        case KEY_F3:
+        dc_show_screen(ds_screen+2);
+        break;
 
+        case KEY_F4:
+        dc_show_screen(ds_screen+3);
+        break;
 
+        case KEY_F5:
+        dc_show_screen(ds_screen+4);
+        break;
     }
+    return 0;
+}
+
+static int dc_vmm_info_show(struct DebugScreen *scr)
+{
+    hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
+    hv_console_set_xy(current_display, 10, 5);
+    hv_disp_puts((struct CharacterDisplay *)current_display, "Version:");
+    hv_console_set_xy(current_display, 30, 5);
+    hv_disp_puts((struct CharacterDisplay *)current_display, "0.1-prealpha");
+
+    hv_console_set_xy(current_display, 10, 6);
+    hv_disp_puts((struct CharacterDisplay *)current_display, "Bit width:");
+    hv_console_set_xy(current_display, 30, 6);
+    hv_disp_puts((struct CharacterDisplay *)current_display, "32 bit");
+}
+
+static int dc_vmm_handle_key(struct DebugScreen *scr, int key)
+{
+    return -HV_ENOIMPL;
 }
 
 static int dc_cpu_info_show(struct DebugScreen *scr)

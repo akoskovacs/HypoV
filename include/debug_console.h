@@ -9,6 +9,7 @@
 #define DEBUG_CONSOLE_H
 
 #include <drivers/video/pc_console.h>
+#include <types.h>
 
 struct DebugScreen;
 
@@ -35,6 +36,6 @@ int dc_init(struct ConsoleDisplay *);
 int dc_show_screen(struct DebugScreen *);
 int dc_top_menu_draw(struct DebugScreen *);
 int dc_bottom_menu_draw(struct DebugScreen *);
-void dc_keyboard_handler(uint8_t scancode);
+int dc_keyboard_handler(char scancode);
 
 #endif // DEBUG_CONSOLE_H
