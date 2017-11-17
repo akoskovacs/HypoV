@@ -33,6 +33,20 @@ void outw(uint16_t port, uint16_t value)
 }
 
 static inline
+int cpuid(int32_t leaf, int32_t output[4])
+{
+    __asm__ __volatile__("cpuid"
+            : "=a"(*output), "=b"(*(output+1)), "=c"(*(output+2)), "=d"(*(output+3))
+            : "a"(leaf)
+            );
+
+    return output[0];
+}
+
+int cpuid_get_branding(char branding[49]);
+int cpuid_get_vendor(char vendor[13]);
+
+static inline
 uint8_t inb(uint16_t port)
 {
     uint8_t value;
@@ -54,6 +68,7 @@ uint16_t inw(uint16_t port)
     return value;
 }
 
+#if 0
 static inline bool is_irq_on()
 {
     int f;
@@ -61,6 +76,7 @@ static inline bool is_irq_on()
     : "=g"(f));
     return !!(f & (1<<9)); /* Must be a bool (8 bit size) */
 }
+#endif
 
 static inline
 void rdtsc(uint32_t *upper, uint32_t *lower)

@@ -9,6 +9,7 @@
 #include <drivers/input/pc_keyboard.h>
 #include <debug_console.h>
 #include <error.h>
+#include <system.h>
 
 enum DC_KEYS {
     DS_F1 = 1,
@@ -136,14 +137,19 @@ static int dc_vmm_info_show(struct DebugScreen *scr)
 {
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
     hv_console_set_xy(current_display, 10, 5);
-    hv_disp_puts((struct CharacterDisplay *)current_display, "Version:");
+    hv_disp_puts((struct CharacterDisplay *)current_display, "Version");
     hv_console_set_xy(current_display, 30, 5);
     hv_disp_puts((struct CharacterDisplay *)current_display, "0.1-prealpha");
 
     hv_console_set_xy(current_display, 10, 6);
-    hv_disp_puts((struct CharacterDisplay *)current_display, "Bit width:");
+    hv_disp_puts((struct CharacterDisplay *)current_display, "Bit width");
     hv_console_set_xy(current_display, 30, 6);
     hv_disp_puts((struct CharacterDisplay *)current_display, "32 bit");
+
+    hv_console_set_xy(current_display, 10, 7);
+    hv_disp_puts((struct CharacterDisplay *)current_display, "Built at");
+    hv_console_set_xy(current_display, 30, 7);
+    hv_disp_puts((struct CharacterDisplay *)current_display, __DATE__ " " __TIME__);
 }
 
 static int dc_vmm_handle_key(struct DebugScreen *scr, int key)
@@ -151,11 +157,34 @@ static int dc_vmm_handle_key(struct DebugScreen *scr, int key)
     return -HV_ENOIMPL;
 }
 
+char vendor[13];
+char branding[49];
+char *branding_start = NULL;
+
 static int dc_cpu_info_show(struct DebugScreen *scr)
 {
-    hv_console_set_xy(current_display, 26, 11);
-    hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT);
-    hv_disp_puts((struct CharacterDisplay *)current_display, "< Implementation required >");
+    hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
+    hv_console_set_xy(current_display, 10, 5);
+    hv_disp_puts((struct CharacterDisplay *)current_display, "Branding");
+
+    hv_console_set_xy(current_display, 30, 5);
+    if (branding_start == NULL) {
+        cpuid_get_branding(branding);
+        branding_start = branding;
+        while (*branding_start == ' ') {
+            branding_start++;
+        }
+
+        cpuid_get_vendor(vendor);
+    }
+
+    hv_disp_puts((struct CharacterDisplay *)current_display, branding_start);
+
+    hv_console_set_xy(current_display, 10, 6);
+    hv_disp_puts((struct CharacterDisplay *)current_display, "Vendor string");
+    hv_console_set_xy(current_display, 30, 6);
+    hv_disp_puts((struct CharacterDisplay *)current_display, vendor);
+
     return -HV_ENOIMPL;
 }
 
@@ -164,11 +193,17 @@ static int dc_cpu_handle_key(struct DebugScreen *scr, int key)
     return -HV_ENOIMPL;
 }
 
-static int dc_mem_info_show(struct DebugScreen *scr) { return dc_cpu_info_show(scr); }
+static int dc_mem_info_show(struct DebugScreen *scr)
+{
+    hv_console_set_xy(current_display, 26, 11);
+    hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT);
+    hv_disp_puts((struct CharacterDisplay *)current_display, "< Implementation required >");
+    return -HV_ENOIMPL;
+}
 static int dc_mem_handle_key(struct DebugScreen *scr, int key) { return -HV_ENOIMPL; }
 
-static int dc_disk_info_show(struct DebugScreen *scr) { return dc_cpu_info_show(scr); }
+static int dc_disk_info_show(struct DebugScreen *scr) { return dc_mem_info_show(scr); }
 static int dc_disk_handle_key(struct DebugScreen *scr, int key) { return -HV_ENOIMPL; }
 
-static int dc_guest_info_show(struct DebugScreen *scr) { return dc_cpu_info_show(scr); }
+static int dc_guest_info_show(struct DebugScreen *scr) { return dc_mem_info_show(scr); }
 static int dc_guest_handle_key(struct DebugScreen *scr, int key) { return -HV_ENOIMPL; }
