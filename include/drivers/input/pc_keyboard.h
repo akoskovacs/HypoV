@@ -35,6 +35,7 @@ enum KEYBOARD_KEY {
     KEY_RCTRL       = 0x1D,
     KEY_ALT         = 0x38,
     KEY_ALT_GR      = 0x38,
+    KEY_TAB         = 0x0F,
     KEY_PRINT_SCREEN= 0x37,
     KEY_PG_UP       = 0x49,
     KEY_PG_DOWN     = 0x51,
@@ -43,7 +44,12 @@ enum KEYBOARD_KEY {
     KEY_LEFT        = 0x4B,
     KEY_RIGHT       = 0x4D,
     KEY_FN          = 0x00,
-    KEY_SUPER       = 0x5B
+    KEY_SUPER       = 0x5B,
+    KEY_Q           = 0x10,
+    KEY_W           = 0x11,
+    KEY_E           = 0x12,
+    KEY_R           = 0x13
+    /* TODO */
 };
 
 /* Index for the keyboard mapping */
