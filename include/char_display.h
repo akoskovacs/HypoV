@@ -46,8 +46,6 @@ int hv_disp_putc_xy(struct CharacterDisplay *this, int x, int y, char ch);
 int hv_disp_puts_xy(struct CharacterDisplay *this, int x, int y, const char *line);
 int hv_disp_puts(struct CharacterDisplay *this, const char *line);
 
-int hv_cdisp_puts(struct CharacterDisplay *disp, const char *str);
-
 #define putchar(ch)         hv_disp_putc(stdout, (ch))
 #define puts(str)           hv_disp_puts(stdout, (str))
 #define fputc(ch, disp)     hv_disp_putc((disp), (ch))
