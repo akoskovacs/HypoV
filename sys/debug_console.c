@@ -136,8 +136,13 @@ int dc_keyboard_handler(char scancode)
         break;
 
         case KEY_TAB:
-        i = current_screen->dc_key % NR_SCREENS;
-        dc_show_screen(ds_screen+i);
+        if (current_screen) {
+            i = current_screen->dc_key % NR_SCREENS;
+            dc_show_screen(ds_screen+i);
+            /* TODO: Delete this delay loop */
+            for (i = 1; i < 1e7; i++)
+                ;
+        }
         return 0; 
     }
 
