@@ -2,3 +2,6 @@
 *.map
 tags
 .*
+*.a
+*.img
+*.bin
