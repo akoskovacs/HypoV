@@ -14,7 +14,7 @@
 struct DebugScreen;
 
 typedef int (*dc_draw_screen_ft)(struct DebugScreen *);
-typedef int (*dc_handle_key_ft)(struct DebugScreen *, char key);
+typedef int (*dc_handle_key_ft)(struct DebugScreen *, int key);
 
 struct DebugScreen {
     int                  dc_key;
