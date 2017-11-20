@@ -21,7 +21,7 @@ enum DC_KEYS {
 
 #define DECL_HANDLER_PROTOTYPES(scrname)                             \
     static int dc_##scrname##_info_show(struct DebugScreen *);       \
-    static int dc_##scrname##_handle_key(struct DebugScreen *, int)  \
+    static int dc_##scrname##_handle_key(struct DebugScreen *, char) \
 
 DECL_HANDLER_PROTOTYPES(vmm);
 DECL_HANDLER_PROTOTYPES(cpu);
@@ -30,12 +30,13 @@ DECL_HANDLER_PROTOTYPES(disk);
 DECL_HANDLER_PROTOTYPES(guest);
 
 static struct ConsoleDisplay *current_display = NULL;
+static struct DebugScreen *current_screen = NULL;
 static struct DebugScreen ds_screen[] = {
-    { DS_F1, "VMM", "This Virtual Machine Manager's functions", dc_vmm_info_show, dc_vmm_handle_key },
+    { DS_F1, "HYPERVISOR", "Hypervisor info, settings and functions", dc_vmm_info_show, dc_vmm_handle_key },
     { DS_F2, "CPU", "Physical CPU information", dc_cpu_info_show, dc_cpu_handle_key },
     { DS_F3, "MEMORY", "System memory-mapping information", dc_mem_info_show, dc_mem_handle_key },
     { DS_F4, "DISK", "Boot partition listings", dc_disk_info_show, dc_disk_handle_key },
-    { DS_F5, "VM", "Guest virtualization OS management", dc_cpu_info_show, dc_cpu_handle_key },
+    { DS_F5, "VM", "Guest virtualization OS management", dc_guest_info_show, dc_guest_handle_key },
 };
 #define NR_SCREENS (sizeof(ds_screen)/sizeof(struct DebugScreen))
 
@@ -46,7 +47,7 @@ int dc_start(struct ConsoleDisplay *disp)
     }
     current_display = disp;
     /* Display the first screen */
-    return dc_show_screen(ds_screen+1);
+    return dc_show_screen(ds_screen);
 }
 
 int dc_show_screen(struct DebugScreen *scr)
@@ -54,6 +55,7 @@ int dc_show_screen(struct DebugScreen *scr)
     if (scr == NULL) {
         return -HV_ENODISP;
     }
+    current_screen = scr;
     hv_console_clear(current_display);
     dc_top_menu_draw(scr);
     dc_bottom_menu_draw(scr);
@@ -66,6 +68,7 @@ int dc_top_menu_draw(struct DebugScreen *scr)
     char sw_tmpl[] = " F1 - ";
     struct DebugScreen *scrs = ds_screen;
     int i;
+    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
 
     hv_console_set_attribute(current_display, FG_COLOR_BROWN | BG_COLOR_BLACK | LIGHT);
     hv_console_fill_line(current_display, 0, 0, CONSOLE_WIDTH(current_display));
@@ -79,15 +82,15 @@ int dc_top_menu_draw(struct DebugScreen *scr)
         } else {
             hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_BROWN);
         }
-        hv_disp_puts((struct CharacterDisplay *)current_display, sw_tmpl);
-        hv_disp_puts((struct CharacterDisplay *)current_display, ds_screen[i].dc_name);
-        hv_disp_putc((struct CharacterDisplay *)current_display, ' ');
+        hv_disp_puts(cdisp, sw_tmpl);
+        hv_disp_puts(cdisp, ds_screen[i].dc_name);
+        hv_disp_putc(cdisp, ' ');
     }
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_BROWN);
     hv_console_fill_line(current_display, current_display->pv_x, 0, CONSOLE_WIDTH(current_display)-current_display->pv_x);
     hv_console_set_xy(current_display, CONSOLE_WIDTH(current_display)-sizeof(branding), 0);
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_BROWN | LIGHT);
-    hv_disp_puts((struct CharacterDisplay *)current_display, branding);
+    hv_disp_puts(cdisp, branding);
     return 0;
 }
 
@@ -95,20 +98,22 @@ int dc_bottom_menu_draw(struct DebugScreen *scr)
 {
     int i;
     const char copyright[] = "Copyright (C) Akos Kovacs ";
+    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
     int x = CONSOLE_WIDTH(current_display) - sizeof(copyright);
 
     hv_console_set_xy(current_display, 1, CONSOLE_LAST_ROW(current_display));
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_BROWN | LIGHT);
     hv_console_fill_line(current_display, 0, CONSOLE_LAST_ROW(current_display), CONSOLE_WIDTH(current_display));
-    hv_disp_puts((struct CharacterDisplay *)current_display, scr->dc_help);
+    hv_disp_puts(cdisp, scr->dc_help);
     hv_console_set_xy(current_display, x, CONSOLE_LAST_ROW(current_display));
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_BROWN);
-    hv_disp_puts((struct CharacterDisplay *)current_display, copyright);
+    hv_disp_puts(cdisp, copyright);
     return 0;
 }
 
 int dc_keyboard_handler(char scancode)
 {
+    int i;
     switch (scancode) {
         case KEY_F1:
         dc_show_screen(ds_screen);
@@ -129,37 +134,58 @@ int dc_keyboard_handler(char scancode)
         case KEY_F5:
         dc_show_screen(ds_screen+4);
         break;
+
+        case KEY_TAB:
+        i = current_screen->dc_key % NR_SCREENS;
+        dc_show_screen(ds_screen+i);
+        return 0; 
+    }
+
+    if (current_screen) {
+        current_screen->dc_key_handler(current_screen, scancode);
     }
     return 0;
 }
 
 static int dc_vmm_info_show(struct DebugScreen *scr)
 {
+    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
     hv_console_set_xy(current_display, 10, 5);
-    hv_disp_puts((struct CharacterDisplay *)current_display, "Version");
+    hv_disp_puts(cdisp, "Version");
     hv_console_set_xy(current_display, 30, 5);
-    hv_disp_puts((struct CharacterDisplay *)current_display, "0.1-prealpha");
+    hv_disp_puts(cdisp, "0.1-prealpha");
 
     hv_console_set_xy(current_display, 10, 6);
-    hv_disp_puts((struct CharacterDisplay *)current_display, "Bit width");
+    hv_disp_puts(cdisp, "Bit width");
     hv_console_set_xy(current_display, 30, 6);
-    hv_disp_puts((struct CharacterDisplay *)current_display, "32 bit");
+    hv_disp_puts(cdisp, "32 bit");
 
     hv_console_set_xy(current_display, 10, 7);
-    hv_disp_puts((struct CharacterDisplay *)current_display, "Built at");
+    hv_disp_puts(cdisp, "Built at");
     hv_console_set_xy(current_display, 30, 7);
-    hv_disp_puts((struct CharacterDisplay *)current_display, __DATE__ " " __TIME__);
+    hv_disp_puts(cdisp, __DATE__ ", " __TIME__);
+
+    hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT);
+    hv_console_set_xy(current_display, 10, 20);
+    hv_disp_puts(cdisp, "[R] - Press R to restart the computer");
+    
 }
 
-static int dc_vmm_handle_key(struct DebugScreen *scr, int key)
+static int dc_vmm_handle_key(struct DebugScreen *scr, char key)
 {
-    return -HV_ENOIMPL;
+    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+    if (key == KEY_R) {
+        hv_console_set_xy(current_display, 10, 21);
+        hv_disp_puts(cdisp, "Restarting...");
+        sys_reboot();
+    }
+    return 0;
 }
 
-char vendor[13];
-char branding[49];
-char *branding_start = NULL;
+static char vendor[13];
+static char branding[49];
+static char *branding_start = NULL;
 
 static int dc_cpu_info_show(struct DebugScreen *scr)
 {
@@ -188,7 +214,7 @@ static int dc_cpu_info_show(struct DebugScreen *scr)
     return -HV_ENOIMPL;
 }
 
-static int dc_cpu_handle_key(struct DebugScreen *scr, int key)
+static int dc_cpu_handle_key(struct DebugScreen *scr, char key)
 {
     return -HV_ENOIMPL;
 }
@@ -200,10 +226,10 @@ static int dc_mem_info_show(struct DebugScreen *scr)
     hv_disp_puts((struct CharacterDisplay *)current_display, "< Implementation required >");
     return -HV_ENOIMPL;
 }
-static int dc_mem_handle_key(struct DebugScreen *scr, int key) { return -HV_ENOIMPL; }
+static int dc_mem_handle_key(struct DebugScreen *scr, char key) { return -HV_ENOIMPL; }
 
 static int dc_disk_info_show(struct DebugScreen *scr) { return dc_mem_info_show(scr); }
-static int dc_disk_handle_key(struct DebugScreen *scr, int key) { return -HV_ENOIMPL; }
+static int dc_disk_handle_key(struct DebugScreen *scr, char key) { return -HV_ENOIMPL; }
 
 static int dc_guest_info_show(struct DebugScreen *scr) { return dc_mem_info_show(scr); }
-static int dc_guest_handle_key(struct DebugScreen *scr, int key) { return -HV_ENOIMPL; }
+static int dc_guest_handle_key(struct DebugScreen *scr, char key) { return -HV_ENOIMPL; }
