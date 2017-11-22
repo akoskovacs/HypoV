@@ -11,6 +11,15 @@
 #include <types.h>
 #include <basic.h>
 
+int cpuid_get_branding(char branding[49]);
+int cpuid_get_vendor(char vendor[13]);
+
+static inline
+void bochs_breakpoint(void)
+{
+    __asm__ __volatile__("xchg %bx, %bx");
+}
+
 /* These helper functions are mostly based on 
    OSDev's inline assembly functions */
 
@@ -42,9 +51,6 @@ int cpuid(int32_t leaf, int32_t output[4])
 
     return output[0];
 }
-
-int cpuid_get_branding(char branding[49]);
-int cpuid_get_vendor(char vendor[13]);
 
 static inline
 uint8_t inb(uint16_t port)
