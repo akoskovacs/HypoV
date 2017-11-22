@@ -23,6 +23,7 @@ SECTIONS
     .multiboot : AT(0x1000)
     {
         *(.multiboot.header)
+        *(.chainloader.text)
     }
 
     /* If everything is fine, the bootloader will
