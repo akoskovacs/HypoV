@@ -48,7 +48,8 @@ enum KEYBOARD_KEY {
     KEY_Q           = 0x10,
     KEY_W           = 0x11,
     KEY_E           = 0x12,
-    KEY_R           = 0x13
+    KEY_R           = 0x13,
+    KEY_C           = 0x2E
     /* TODO */
 };
 
