@@ -18,6 +18,13 @@ enum CPUID_REGISTERS {
     CPUID_REG_EDX
 };
 
+/* 
+ * Implemented by the keyboard driver, because on PCs the keyboard
+ * controller is routed to the reset line
+*/
+void sys_reboot(void);
+void sys_chainload(void) __noreturn;
+
 int cpuid_get_branding(char branding[49]);
 int cpuid_get_vendor(char vendor[13]);
 
@@ -136,11 +143,5 @@ void halt(void)
 {
     __asm__ __volatile__("hlt");
 }
-
-/* 
- * Implemented by the keyboard driver, because on PCs the keyboard
- * controller is routed to the reset line
-*/
-void sys_reboot(void);
 
 #endif // SYSTEM_H
