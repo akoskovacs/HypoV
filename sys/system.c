@@ -27,7 +27,7 @@ int cpuid_get_vendor(char vendor[13])
     int32_t tmp, i;
     /* cpuid() function gives { EAX, EBX, ECX, EDX }, but the
        vendor id is { EBX, EDX, ECX } */
-    int32_t *vend[4];
+    int32_t vend[4];
     cpuid(0, vend);
     tmp = vend[3];       // save EDX
     vend[3] = vend[2];   // overwrite EDX with ECX
