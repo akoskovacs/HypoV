@@ -9,7 +9,7 @@ MAKEFLAGS += -rR --no-print-directory
 
 SHARED_FLAGS := -m32 -std=c99 -nostdinc -fno-builtin -fno-stack-protector -fno-unwind-tables
 SHARED_FLAGS += -fno-asynchronous-unwind-tables -ffreestanding -Wl,-melf_i386 -march=i586
-SHARED_FLAGS += -nostartfiles -nodefaultlibs -nostdlib -static
+SHARED_FLAGS += -nostartfiles -nodefaultlibs -nostdlib -static -mno-80387 -mno-fp-ret-in-387
 
 # To put more focus on warnings, be less verbose as default
 # Use 'make V=1' to see the full commands
