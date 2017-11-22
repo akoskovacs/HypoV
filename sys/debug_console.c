@@ -8,6 +8,7 @@
 
 #include <drivers/input/pc_keyboard.h>
 #include <debug_console.h>
+#include <print.h>
 #include <error.h>
 #include <system.h>
 
@@ -29,8 +30,10 @@ DECL_HANDLER_PROTOTYPES(mem);
 DECL_HANDLER_PROTOTYPES(disk);
 DECL_HANDLER_PROTOTYPES(guest);
 
-static struct ConsoleDisplay *current_display = NULL;
-static struct DebugScreen *current_screen = NULL;
+static struct ConsoleDisplay *current_display    = NULL;
+static struct DebugScreen *current_screen        = NULL;
+static struct MultiBootInfo *boot_info           = NULL;
+
 static struct DebugScreen ds_screen[] = {
     { DS_F1, "HYPERVISOR", "Hypervisor info, settings and functions", dc_vmm_info_show, dc_vmm_handle_key },
     { DS_F2, "CPU", "Physical CPU information", dc_cpu_info_show, dc_cpu_handle_key },
@@ -40,12 +43,13 @@ static struct DebugScreen ds_screen[] = {
 };
 #define NR_SCREENS (sizeof(ds_screen)/sizeof(struct DebugScreen))
 
-int dc_start(struct ConsoleDisplay *disp)
+int dc_start(struct ConsoleDisplay *disp, struct MultiBootInfo *mbi)
 {
     if (disp == NULL) {
         return -HV_ENODISP;
     }
     current_display = disp;
+    boot_info = mbi;
     /* Display the first screen */
     return dc_show_screen(ds_screen);
 }
@@ -56,7 +60,7 @@ int dc_show_screen(struct DebugScreen *scr)
         return -HV_ENODISP;
     }
     current_screen = scr;
-    hv_console_clear(current_display);
+    hv_console_clear((struct CharacterDisplay *)current_display);
     dc_top_menu_draw(scr);
     dc_bottom_menu_draw(scr);
     return scr->dc_draw_handler(scr);
@@ -64,9 +68,8 @@ int dc_show_screen(struct DebugScreen *scr)
 
 int dc_top_menu_draw(struct DebugScreen *scr)
 {
-    const char branding[] = " HypoV ";
     char sw_tmpl[] = " F1 - ";
-    struct DebugScreen *scrs = ds_screen;
+    const char branding[] = " HypoV ";
     int i;
     struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
 
@@ -87,24 +90,33 @@ int dc_top_menu_draw(struct DebugScreen *scr)
         hv_disp_putc(cdisp, ' ');
     }
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_BROWN);
-    hv_console_fill_line(current_display, current_display->pv_x, 0, CONSOLE_WIDTH(current_display)-current_display->pv_x);
+    hv_console_fill_line(current_display, current_display->pv_x, 0
+            , CONSOLE_WIDTH(current_display)-(current_display->pv_x));
     hv_console_set_xy(current_display, CONSOLE_WIDTH(current_display)-sizeof(branding), 0);
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_BROWN | LIGHT);
     hv_disp_puts(cdisp, branding);
     return 0;
 }
 
-int dc_bottom_menu_draw(struct DebugScreen *scr)
+int dc_bottom_show_message(struct DebugScreen *scr, const char *message)
 {
-    int i;
-    const char copyright[] = "Copyright (C) Akos Kovacs ";
     struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
-    int x = CONSOLE_WIDTH(current_display) - sizeof(copyright);
 
     hv_console_set_xy(current_display, 1, CONSOLE_LAST_ROW(current_display));
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_BROWN | LIGHT);
     hv_console_fill_line(current_display, 0, CONSOLE_LAST_ROW(current_display), CONSOLE_WIDTH(current_display));
-    hv_disp_puts(cdisp, scr->dc_help);
+
+    hv_disp_puts(cdisp, message);
+    return 0;
+}
+
+int dc_bottom_menu_draw(struct DebugScreen *scr)
+{
+    const char copyright[] = "Copyright (C) Akos Kovacs ";
+    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+    int x = CONSOLE_WIDTH(current_display) - sizeof(copyright);
+
+    dc_bottom_show_message(scr, scr->dc_help);
     hv_console_set_xy(current_display, x, CONSOLE_LAST_ROW(current_display));
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_BROWN);
     hv_disp_puts(cdisp, copyright);
@@ -140,7 +152,7 @@ int dc_keyboard_handler(char scancode)
             i = current_screen->dc_key % NR_SCREENS;
             dc_show_screen(ds_screen+i);
             /* TODO: Delete this delay loop */
-            for (i = 1; i < 1e7; i++)
+            for (i = 1; i < 5e7; i++)
                 ;
         }
         return 0; 
@@ -155,34 +167,64 @@ int dc_keyboard_handler(char scancode)
 static int dc_vmm_info_show(struct DebugScreen *scr)
 {
     struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+    int row = 5;
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
-    hv_console_set_xy(current_display, 10, 5);
+    hv_console_set_xy(current_display, 10, row);
     hv_disp_puts(cdisp, "Version");
-    hv_console_set_xy(current_display, 30, 5);
+    hv_console_set_xy(current_display, 30, row++);
     hv_disp_puts(cdisp, "0.1-prealpha");
 
-    hv_console_set_xy(current_display, 10, 6);
+    hv_console_set_xy(current_display, 10, row);
     hv_disp_puts(cdisp, "Bit width");
-    hv_console_set_xy(current_display, 30, 6);
+    hv_console_set_xy(current_display, 30, row++);
     hv_disp_puts(cdisp, "32 bit");
 
-    hv_console_set_xy(current_display, 10, 7);
+    hv_console_set_xy(current_display, 10, row);
     hv_disp_puts(cdisp, "Built at");
-    hv_console_set_xy(current_display, 30, 7);
+    hv_console_set_xy(current_display, 30, row++);
     hv_disp_puts(cdisp, __DATE__ ", " __TIME__);
+
+    hv_console_set_xy(current_display, 10, row);
+    hv_disp_puts(cdisp, "Multiboot info");
+    if (boot_info) {
+        hv_console_set_xy(current_display, 30, row++);
+        hv_disp_puts(cdisp, "Valid");
+
+        if (boot_info->flags & MB_INFO_BOOTDEV) {
+            hv_console_set_xy(current_display, 10, row);
+            hv_disp_puts(cdisp, "Boot device");
+            hv_console_set_xy(current_display, 30, row++);
+            hv_printf(cdisp, "0x%X", boot_info->boot_device);
+        }
+
+        if (boot_info->flags & MB_INFO_BOOT_LOADER) {
+            hv_console_set_xy(current_display, 10, row);
+            hv_disp_puts(cdisp, "Boot loader");
+            hv_console_set_xy(current_display, 30, row++);
+            hv_printf(cdisp, "%s", (const char *)boot_info->boot_loader_name);
+        }
+
+        if (boot_info->flags & MB_INFO_CMDLINE) {
+            hv_console_set_xy(current_display, 10, row);
+            hv_disp_puts(cdisp, "Boot command line");
+            hv_console_set_xy(current_display, 30, row++);
+            hv_printf(cdisp, "%s", (const char *)boot_info->cmdline);
+        }
+    } else {
+        hv_console_set_xy(current_display, 30, row++);
+        hv_disp_puts(cdisp, "Invalid");
+    }
 
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT);
     hv_console_set_xy(current_display, 10, 20);
     hv_disp_puts(cdisp, "[R] - Press R to restart the computer");
-    
+    return 0;    
 }
 
 static int dc_vmm_handle_key(struct DebugScreen *scr, char key)
 {
-    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
     if (key == KEY_R) {
-        hv_console_set_xy(current_display, 10, 21);
-        hv_disp_puts(cdisp, "Restarting...");
+        dc_bottom_show_message(scr, "Restarting...");
         sys_reboot();
     }
     return 0;
@@ -194,9 +236,10 @@ static char *branding_start = NULL;
 
 static int dc_cpu_info_show(struct DebugScreen *scr)
 {
+    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
     hv_console_set_xy(current_display, 10, 5);
-    hv_disp_puts((struct CharacterDisplay *)current_display, "Branding");
+    hv_disp_puts(cdisp, "Branding");
 
     hv_console_set_xy(current_display, 30, 5);
     if (branding_start == NULL) {
@@ -209,12 +252,12 @@ static int dc_cpu_info_show(struct DebugScreen *scr)
         cpuid_get_vendor(vendor);
     }
 
-    hv_disp_puts((struct CharacterDisplay *)current_display, branding_start);
+    hv_disp_puts(cdisp, branding_start);
 
     hv_console_set_xy(current_display, 10, 6);
-    hv_disp_puts((struct CharacterDisplay *)current_display, "Vendor string");
+    hv_disp_puts(cdisp, "Vendor string");
     hv_console_set_xy(current_display, 30, 6);
-    hv_disp_puts((struct CharacterDisplay *)current_display, vendor);
+    hv_disp_puts(cdisp, vendor);
 
     return -HV_ENOIMPL;
 }
@@ -224,17 +267,65 @@ static int dc_cpu_handle_key(struct DebugScreen *scr, char key)
     return -HV_ENOIMPL;
 }
 
+static void mem_info_dump(struct DebugScreen *scr, struct MultiBootInfo *mbi, int row)
+{
+    typedef struct MultiBootMmapEntry MMapEntry;
+
+    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+    MMapEntry *mmap = (MMapEntry *)mbi->mmap_addr;
+
+    uint64_t length_addr;
+    unsigned int size;
+
+    bochs_breakpoint();
+
+    hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
+    while (mmap < (MMapEntry *)(mbi->mmap_addr + mbi->mmap_length)) {
+        length_addr = mmap->addr + mmap->length;
+        size        = mmap->length/1024;
+        if (size != 0 && mmap->addr != 0 && length_addr != 0) {
+            hv_console_set_xy(current_display, 10, row++);
+            //hv_disp_puts(cdisp, "mem address");
+            hv_printf(cdisp, "0x%X%X - 0x%X%X, size %d KB [%s]"
+                , mmap->addr, length_addr, size
+                , (mmap->type == MB_MEMORY_RESERVED) ? "reserved" : "available");
+        }
+
+        mmap += mmap->size; // + sizeof(mmap->size);
+    }
+}
+
 static int dc_mem_info_show(struct DebugScreen *scr)
 {
+    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+    unsigned int mem = 0;
+    hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT);
+    hv_console_set_xy(current_display, 10, 5);
+    if ((boot_info != NULL) && (boot_info->flags & MB_INFO_MEM_MAP)) {
+        mem = boot_info->mem_lower + boot_info->mem_upper;
+        hv_disp_puts(cdisp, "Total memory");
+        hv_console_set_xy(current_display, 30, 5);
+        hv_printf(cdisp, "%d KB (%d MB)", mem, mem/1024);
+        mem_info_dump(scr, boot_info, 6);
+    } else {
+        hv_disp_puts(cdisp, "No memory information provided by the bootloader");
+    }
+    return -HV_ENOIMPL;
+}
+
+static int dc_mem_handle_key(struct DebugScreen *scr, char key)
+{ 
+    return -HV_ENOIMPL; 
+}
+
+static int dc_disk_info_show(struct DebugScreen *scr) 
+{ 
     hv_console_set_xy(current_display, 26, 11);
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT);
     hv_disp_puts((struct CharacterDisplay *)current_display, "< Implementation required >");
     return -HV_ENOIMPL;
 }
-static int dc_mem_handle_key(struct DebugScreen *scr, char key) { return -HV_ENOIMPL; }
-
-static int dc_disk_info_show(struct DebugScreen *scr) { return dc_mem_info_show(scr); }
 static int dc_disk_handle_key(struct DebugScreen *scr, char key) { return -HV_ENOIMPL; }
 
-static int dc_guest_info_show(struct DebugScreen *scr) { return dc_mem_info_show(scr); }
+static int dc_guest_info_show(struct DebugScreen *scr) { return dc_disk_info_show(scr); }
 static int dc_guest_handle_key(struct DebugScreen *scr, char key) { return -HV_ENOIMPL; }
