@@ -49,7 +49,14 @@ hv_multiboot_entry:
     mov esp, hv_stack+HV_STACK_SIZE
     mov ebp, esp
 ; Push the arguments for the C function
+; If the magic number is wrong, make multiboot info pointer NULL
+    cmp eax, MB_MAGIC
+    je .magic_good
+    push 0
+    jmp .load_magic
+.magic_good:
     push eax
+.load_magic:
     push ebx
 ; Call the 32 bit C entry function in sys/init.c
 ; hv_entry(struct MultiBootInfo *, int magic)
