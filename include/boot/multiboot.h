@@ -16,6 +16,8 @@
 
 #include <basic.h>
 
+#define MB_MAGIC        0x1BADB002
+
 enum MULTIBOOT_FLAGS {
     MB_INFO_MEMORY        = 0x0001,
     MB_INFO_BOOTDEV       = 0x0002,
