@@ -11,6 +11,13 @@
 #include <types.h>
 #include <basic.h>
 
+enum CPUID_REGISTERS {
+    CPUID_REG_EAX = 0,
+    CPUID_REG_EBX,
+    CPUID_REG_ECX,
+    CPUID_REG_EDX
+};
+
 int cpuid_get_branding(char branding[49]);
 int cpuid_get_vendor(char vendor[13]);
 

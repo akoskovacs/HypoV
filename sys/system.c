@@ -8,6 +8,7 @@
 
 #include <system.h>
 #include <types.h>
+#include <string.h>
 
 int cpuid_get_branding(char branding[49])
 {
@@ -24,17 +25,20 @@ int cpuid_get_branding(char branding[49])
 
 int cpuid_get_vendor(char vendor[13])
 {
-    int32_t tmp, i;
-    /* cpuid() function gives { EAX, EBX, ECX, EDX }, but the
-       vendor id is { EBX, EDX, ECX } */
+    int32_t tmp_reg;
     int32_t vend[4];
+
+    /* cpuid() function gives { EAX, EBX, ECX, EDX }, but the
+       vendor id string is in { EBX, EDX, ECX } order */
     cpuid(0, vend);
-    tmp = vend[3];       // save EDX
-    vend[3] = vend[2];   // overwrite EDX with ECX
-    vend[2] = tmp;       // and vica versa
-    for (i = 0; i < 13; i++) {
-        vendor[i] = *(((char *)vend)+i+4); // (+4) because EAX is uneeded
-    }
+
+    /* Swap EDX with ECX */
+    tmp_reg             = vend[CPUID_REG_ECX];
+    vend[CPUID_REG_ECX] = vend[CPUID_REG_EDX];
+    vend[CPUID_REG_EDX] = tmp_reg;
+
+    /* Skip EAX, it is not in the string */
+    strncpy(vendor, (const char *)(vend+1), 12);
     vendor[12] = '\0';
     return 0;
 }
