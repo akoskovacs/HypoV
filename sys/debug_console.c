@@ -218,6 +218,8 @@ static int dc_vmm_info_show(struct DebugScreen *scr)
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT);
     hv_console_set_xy(current_display, 10, 20);
     hv_disp_puts(cdisp, "[R] - Press R to restart the computer");
+    hv_console_set_xy(current_display, 10, 21);
+    hv_disp_puts(cdisp, "[C] - Press C to resume loading from the first hard disk");
     return 0;    
 }
 
@@ -226,17 +228,20 @@ static int dc_vmm_handle_key(struct DebugScreen *scr, char key)
     if (key == KEY_R) {
         dc_bottom_show_message(scr, "Restarting...");
         sys_reboot();
+    } else if (key == KEY_C) {
+        dc_bottom_show_message(scr, "Resume loading from the disk...");
+        sys_chainload(); 
     }
     return 0;
 }
 
-static char vendor[13];
-static char branding[49];
-static char *branding_start = NULL;
-
 static int dc_cpu_info_show(struct DebugScreen *scr)
 {
+    static char vendor[13];
+    static char branding[49];
+    static char *branding_start = NULL;
     struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
     hv_console_set_xy(current_display, 10, 5);
     hv_disp_puts(cdisp, "Branding");
@@ -245,6 +250,8 @@ static int dc_cpu_info_show(struct DebugScreen *scr)
     if (branding_start == NULL) {
         cpuid_get_branding(branding);
         branding_start = branding;
+        /* The branding string is padded with spaces from
+           the beginning, skip that */
         while (*branding_start == ' ') {
             branding_start++;
         }
@@ -327,5 +334,9 @@ static int dc_disk_info_show(struct DebugScreen *scr)
 }
 static int dc_disk_handle_key(struct DebugScreen *scr, char key) { return -HV_ENOIMPL; }
 
-static int dc_guest_info_show(struct DebugScreen *scr) { return dc_disk_info_show(scr); }
+static int dc_guest_info_show(struct DebugScreen *scr) 
+{ 
+    return dc_disk_info_show(scr);
+}
+
 static int dc_guest_handle_key(struct DebugScreen *scr, char key) { return -HV_ENOIMPL; }
