@@ -417,16 +417,32 @@ int conf_read(const char *name)
 	return 0;
 }
 
+enum CONFIG_FILE_TYPE {
+	CF_C_HEADER,
+	CF_NASM_HEADER,
+	CF_MAKE
+};
+
 /* Write a S_STRING */
-static void conf_write_string(bool headerfile, const char *name,
+static void conf_write_string(enum CONFIG_FILE_TYPE ftype, const char *name,
                               const char *str, FILE *out)
 {
 	int l;
-	if (headerfile)
+	switch (ftype) {
+		case CF_C_HEADER:
 		fprintf(out, "#define %s%s \"", CONFIG_, name);
-	else
-		fprintf(out, "%s%s=\"", CONFIG_, name);
+		break;
 
+		case CF_NASM_HEADER:
+		fprintf(out, "%%define %s%s \"", CONFIG_, name);
+		break;
+
+		case CF_MAKE:
+		fprintf(out, "%s%s=\"", CONFIG_, name);
+		break;
+	}
+
+	/* Hopefully NASM breaks strings up like this */
 	while (1) {
 		l = strcspn(str, "\"\\");
 		if (l) {
@@ -462,7 +478,7 @@ static void conf_write_symbol(struct symbol *sym, FILE *out, bool write_no)
 		}
 		break;
 	case S_STRING:
-		conf_write_string(false, sym->name, sym_get_string_value(sym), out);
+		conf_write_string(CF_MAKE, sym->name, sym_get_string_value(sym), out);
 		break;
 	case S_HEX:
 	case S_INT:
@@ -773,7 +789,10 @@ int conf_write_autoconf(void)
 	struct symbol *sym;
 	const char *str;
 	const char *name;
-	FILE *out, *tristate, *out_h;
+	char *nasm_name;
+	char nasm_ext[] = "inc";
+	size_t name_len = 0;
+	FILE *out, *tristate, *out_h, *out_inc;
 	int i;
 
 	sym_clear_all_valid();
@@ -800,6 +819,14 @@ int conf_write_autoconf(void)
 		return 1;
 	}
 
+	out_inc = fopen(".tmpconfig.inc", "w");
+	if (!out_inc) {
+		fclose(out);
+		fclose(tristate);
+		fclose(out_h);
+		return 1;
+	}
+
 	fprintf(out, "#\n"
 		     "# Automatically generated make config: don't edit\n"
 		     "# %s\n"
@@ -812,6 +839,11 @@ int conf_write_autoconf(void)
 		       " * Automatically generated C config: don't edit\n"
 		       " * %s\n"
 		       " */\n",
+		       rootmenu.prompt->text);
+
+	fprintf(out_inc,
+		       "; Automatically generated Netwide Assembler config: don't edit\n"
+		       "; %s\n\n",
 		       rootmenu.prompt->text);
 
 	for_all_symbols(i, sym) {
@@ -834,6 +866,8 @@ int conf_write_autoconf(void)
 				    CONFIG_, sym->name);
 				fprintf(out_h, "#define %s%s_MODULE 1\n",
 				    CONFIG_, sym->name);
+				fprintf(out_inc, "%%define %s%s_MODULE 1\n",
+				    CONFIG_, sym->name);
 				break;
 			case yes:
 				if (sym->type == S_TRISTATE)
@@ -841,22 +875,29 @@ int conf_write_autoconf(void)
 					    CONFIG_, sym->name);
 				fprintf(out_h, "#define %s%s 1\n",
 				    CONFIG_, sym->name);
+				fprintf(out_inc, "%%define %s%s 1\n",
+				    CONFIG_, sym->name);
 				break;
 			}
 			break;
 		case S_STRING:
-			conf_write_string(true, sym->name, sym_get_string_value(sym), out_h);
+			conf_write_string(CF_C_HEADER, sym->name, sym_get_string_value(sym), out_h);
+			conf_write_string(CF_NASM_HEADER, sym->name, sym_get_string_value(sym), out_inc);
 			break;
 		case S_HEX:
 			str = sym_get_string_value(sym);
 			if (str[0] != '0' || (str[1] != 'x' && str[1] != 'X')) {
 				fprintf(out_h, "#define %s%s 0x%s\n",
 				    CONFIG_, sym->name, str);
+				fprintf(out_inc, "%%define %s%s 0x%s\n",
+				    CONFIG_, sym->name, str);
 				break;
 			}
 		case S_INT:
 			str = sym_get_string_value(sym);
 			fprintf(out_h, "#define %s%s %s\n",
+			    CONFIG_, sym->name, str);
+			fprintf(out_inc, "%%define %s%s %s\n",
 			    CONFIG_, sym->name, str);
 			break;
 		default:
@@ -866,12 +907,28 @@ int conf_write_autoconf(void)
 	fclose(out);
 	fclose(tristate);
 	fclose(out_h);
+	fclose(out_inc);
 
 	name = getenv("KCONFIG_AUTOHEADER");
 	if (!name)
 		name = "include/generated/autoconf.h";
+
 	if (rename(".tmpconfig.h", name))
 		return 1;
+
+	/* Hopefully the header extension is .h, so we can just change that to .inc */
+	name_len  = strlen(name);
+	nasm_name = (char *)calloc(name_len+sizeof(nasm_ext), sizeof(char));
+	strcpy(nasm_name, name);
+	/* Overwrite the 'h' */
+	strcpy(nasm_name+name_len-1, nasm_ext);
+
+	if (rename(".tmpconfig.inc", nasm_name)) {
+		free(nasm_name);
+		return 1;
+	}
+	free(nasm_name);
+
 	name = getenv("KCONFIG_TRISTATE");
 	if (!name)
 		name = "include/config/tristate.conf";
