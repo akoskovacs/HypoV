@@ -9,8 +9,7 @@
 #include <print.h>
 #include <string.h>
 
-#define KPRINTF_BUFFER_SIZE 512
-char buffer[KPRINTF_BUFFER_SIZE];
+char buffer[CONFIG_PRINTF_BUFFER_SIZE];
 
 int hv_vsnprintf(char *dest, size_t size, const char *fmt, va_list ap)
 {
@@ -88,7 +87,7 @@ int hv_vsnprintf(char *dest, size_t size, const char *fmt, va_list ap)
     int size;  \
     va_list ap; \
     va_start(ap, fmt); \
-    size = hv_vsnprintf(buffer, KPRINTF_BUFFER_SIZE, fmt, ap); \
+    size = hv_vsnprintf(buffer, CONFIG_PRINTF_BUFFER_SIZE, fmt, ap); \
     va_end(ap)
 
 int hv_snprintf(char *dest, size_t size, const char *fmt, ...)

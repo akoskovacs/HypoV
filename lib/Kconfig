@@ -1,0 +1,8 @@
+menu "Library settings"
+
+config PRINTF_BUFFER_SIZE
+    default 512
+    int "Buffer size of *printf()"
+    ---help---
+        Size of the buffer for the *printf() style functions in bytes.
+endmenu
