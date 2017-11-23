@@ -1,0 +1,5 @@
+menu "Boot configuration"
+    config STACK_SIZE
+    default 4096
+    int "Stack size for the Debug Console"
+endmenu

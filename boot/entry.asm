@@ -11,8 +11,6 @@ global hv_multiboot_entry
 global hv_multiboot_header
 extern hv_entry
 
-%define HV_STACK_SIZE 4096 ; 4Kb stack
-
 ; Multiboot definitions
 %define MB_ALIGN        0x001
 %define MB_MEMINFO      0x002
@@ -46,7 +44,7 @@ hv_multiboot_entry:
     push 0
     popf
 ; The stack grows down from the reserved area
-    mov esp, hv_stack+HV_STACK_SIZE
+    mov esp, hv_stack+CONFIG_STACK_SIZE
     mov ebp, esp
 ; Push the arguments for the C function
 ; If the magic number is wrong, make multiboot info pointer NULL
@@ -65,4 +63,4 @@ hv_multiboot_entry:
     jmp .hang
 
 section .bss
-hv_stack: resb HV_STACK_SIZE
+hv_stack: resb CONFIG_STACK_SIZE
