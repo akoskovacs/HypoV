@@ -200,7 +200,7 @@ $(obj)/%.o: $(src)/%.S FORCE
 
 # Compile NASM assembly sources as well (.asm)
 
-quiet_cmd_nasm_o_asm = NASM $(quiet_modtag) $@
+quiet_cmd_nasm_o_asm = NASM$(quiet_modtag) $@
 cmd_nasm_o_asm 	 	 = $(NASM) $(nasm_flags) -o $@ $<
 
 $(obj)/%.o: $(src)/%.asm FORCE
@@ -213,8 +213,9 @@ targets += $(extra-y) $(MAKECMDGOALS) $(always)
 
 # Linker scripts preprocessor (.lds.S -> .lds)
 # ---------------------------------------------------------------------------
+# removed flag: -U$(ARCH)
 quiet_cmd_cpp_lds_S = LDS     $@
-      cmd_cpp_lds_S = $(CPP) $(cpp_flags) -P -C -U$(ARCH) \
+      cmd_cpp_lds_S = $(CPP) $(cpp_flags) -P -C \
 	                     -D__ASSEMBLY__ -DLINKER_SCRIPT -o $@ $<
 
 $(obj)/%.lds: $(src)/%.lds.S FORCE

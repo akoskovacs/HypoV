@@ -355,6 +355,7 @@ loader: stage0/stage0
 #LDFLAGS += -melf32_x86_64
 # LDFLAGS += -melf_i386
 
+
 all: hypov loader
 objs-y		:= sys boot
 libs-y		:= lib
@@ -367,7 +368,7 @@ hypov-all	:= $(hypov-objs) $(hypov-libs)
 quiet_cmd_hypov = LD      $@
       cmd_hypov = $(CC) $(LDFLAGS) -o hypov.bin \
       -Wl,--start-group $(hypov-libs) $(hypov-objs) -Wl,--end-group \
-	  -Wl,-Tboot/linker.ld $(SHARED_FLAGS) -Wl,-Map $(MAPFILE)
+	  -Wl,-T boot/linker.lds $(SHARED_FLAGS) -Wl,-Map $(MAPFILE)
 
 hypov: $(hypov-all)
 	$(call if_changed,hypov)
