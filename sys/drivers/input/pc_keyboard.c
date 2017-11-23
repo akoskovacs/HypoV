@@ -13,7 +13,7 @@
 #define KBD_PORT 0x60
 
 /* TODO... */
-#if KBD_HAVE_UNICODE
+#ifdef KBD_HAVE_UNICODE
 const char kbd_hu_keymap[] = "\0\000123456789öüó\b\t"
             /* 0x10 */ "qwertzuiopőú\n\0as"
             /* 0x20 */ "dfghjkléá0\0űyxcv"
@@ -68,10 +68,8 @@ const char kbd_hu_spec_keys[] = {
 #define SPEC_KEY_LAST (sizeof(kbd_hu_spec_keys)/sizeof(uint8_t)-1)
 
 static const char *kbd_keymap = kbd_hu_keymap;
-static const uint8_t *kbd_spec_keys = kbd_hu_spec_keys;
+static const char *kbd_spec_keys = kbd_hu_spec_keys;
 static size_t kbd_keymap_size = KBD_HU_KEYMAP_SIZE;
-static bool kbd_is_shift_on = false;
-static bool kbd_is_caps_lock_on = false;
 
 void keyboard_set_keymap(const char *map_name)
 {
@@ -83,7 +81,7 @@ void keyboard_set_keymap(const char *map_name)
     }
 }
 
-uint8_t keyboard_scancode_for(enum KEYBOARD_KEY_INDEX k)
+char keyboard_scancode_for(enum KEYBOARD_KEY_INDEX k)
 {
     if (k >= SPEC_KEY_FIRST && k <= SPEC_KEY_LAST) {
         return kbd_spec_keys[k];
@@ -91,9 +89,9 @@ uint8_t keyboard_scancode_for(enum KEYBOARD_KEY_INDEX k)
     return KBI_INVALID;
 }
 
-uint8_t keyboard_get_scancode(void)
+char keyboard_get_scancode(void)
 {
-    uint8_t c = 0;
+    char c = 0;
     do {
         if (inb(KBD_PORT) != c) {
             c = inb(KBD_PORT);
@@ -104,7 +102,7 @@ uint8_t keyboard_get_scancode(void)
     } while (1);
 }
 
-char keyboard_read(uint8_t *scancode)
+char keyboard_read(char *scancode)
 {
     uint8_t sc = keyboard_get_scancode();
     if (scancode != NULL) {
@@ -135,18 +133,14 @@ void sys_reboot(void)
 void __noreturn keyboard_loop(key_handler_ft key_handler)
 {
     bool is_prev_ctrl = false;
-    bool is_prev_alt = false;
     bool is_prev_ctrl_alt = false;
     char scancode;
-    int i = 0;
     forever {
         char ch = keyboard_read(&scancode);
         if (ch == KEY_RCTRL || ch == KEY_LCTRL) {
             is_prev_ctrl = true;
-            is_prev_alt = false;
             is_prev_ctrl_alt = false;
         } else if (ch == KEY_ALT || ch == KEY_ALT_GR) {
-            is_prev_alt = true;
             if (is_prev_ctrl) {
                 is_prev_ctrl_alt = true;
             }
@@ -156,7 +150,6 @@ void __noreturn keyboard_loop(key_handler_ft key_handler)
             }
         } else {
             is_prev_ctrl = false;
-            is_prev_alt = false;
             is_prev_ctrl_alt = false;
 
             if (key_handler) {

@@ -49,7 +49,8 @@ enum KEYBOARD_KEY {
     KEY_W           = 0x11,
     KEY_E           = 0x12,
     KEY_R           = 0x13,
-    KEY_C           = 0x2E
+    KEY_C           = 0x2E,
+    KEY_SPACE       = 0x39
     /* TODO */
 };
 
@@ -69,9 +70,9 @@ enum KEYBOARD_KEY_INDEX {
 typedef int (*key_handler_ft)(char scancode);
 
 void keyboard_set_keymap(const char *);
-uint8_t keyboard_get_scancode(void);
-uint8_t keyboard_scancode_for(enum KEYBOARD_KEY_INDEX spec_key);
-char keyboard_read(uint8_t *scancode);
+char keyboard_get_scancode(void);
+char keyboard_scancode_for(enum KEYBOARD_KEY_INDEX spec_key);
+char keyboard_read(char *scancode);
 void keyboard_loop(key_handler_ft handler);
 void sys_reboot(void);
 
