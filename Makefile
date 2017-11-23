@@ -335,8 +335,6 @@ $(KCONFIG_CONFIG) include/config/auto.conf.cmd: ;
 # we execute the config step to be sure to catch updated Kconfig files
 include/config/%.conf: $(KCONFIG_CONFIG) include/config/auto.conf.cmd
 	$(Q)$(MAKE) -f $(srctree)/Makefile silentoldconfig
-
-
 else
 # Dummy target needed, because used as prerequisite
 include/config/auto.conf: ;
@@ -409,7 +407,7 @@ $(hypov-dirs): scripts_basic
 
 # Directories & files removed with 'make clean'
 CLEAN_DIRS  += 
-CLEAN_FILES +=	hypov
+CLEAN_FILES +=	hypov.bin
 
 # Directories & files removed with 'make mrproper'
 MRPROPER_DIRS  += include/config include/generated
