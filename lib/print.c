@@ -100,7 +100,6 @@ int hv_snprintf(char *dest, size_t size, const char *fmt, ...)
     return ret;
 }
 
-
 int hv_printf(struct CharacterDisplay *disp, const char *fmt, ...)
 {
     KPRINT_TEMPLATE();

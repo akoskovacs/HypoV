@@ -13,7 +13,8 @@
 #include <string.h>
 #include <types.h>
 
-int hv_console_display_init(struct ConsoleDisplay *m) {
+int hv_console_display_init(struct ConsoleDisplay *m) 
+{
     if (m == NULL) {
         return -HV_ENODISP;
     }
