@@ -11,6 +11,8 @@ SHARED_FLAGS := -m32 -std=c99 -nostdinc -fno-builtin -fno-stack-protector -fno-u
 SHARED_FLAGS += -fno-asynchronous-unwind-tables -ffreestanding -Wl,-melf_i386 -march=i586
 SHARED_FLAGS += -nostartfiles -nodefaultlibs -nostdlib -static -mno-80387 -mno-fp-ret-in-387
 
+BINARY_TARGET := hypov.bin
+
 # To put more focus on warnings, be less verbose as default
 # Use 'make V=1' to see the full commands
 
@@ -112,6 +114,8 @@ HOSTCC       = gcc
 HOSTCXX      = g++
 HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer
 HOSTCXXFLAGS = -O2
+
+GRUB_MKRESCUE = grub-mkrescue
 
 # Beautify output
 # ---------------------------------------------------------------------------
@@ -364,7 +368,7 @@ hypov-libs	:= $(patsubst %,%/lib.a, $(libs-y))
 hypov-all	:= $(hypov-objs) $(hypov-libs)
 
 quiet_cmd_hypov = LD      $@
-      cmd_hypov = $(CC) $(LDFLAGS) -o hypov.bin \
+      cmd_hypov = $(CC) $(LDFLAGS) -o $(BINARY_TARGET) \
       -Wl,--start-group $(hypov-libs) $(hypov-objs) -Wl,--end-group \
 	  -Wl,-T boot/linker.lds $(SHARED_FLAGS) -Wl,-Map $(MAPFILE)
 
@@ -374,13 +378,21 @@ hypov: $(hypov-all)
 	$(Q)$(CHECK_MBOOT) $@.bin && echo "OK]" || echo "FAIL]"
 
 qemu: hypov
-	$(Q)$(QEMU32) -kernel hypov.bin
+	$(Q)$(QEMU32) -kernel $(BINARY_TARGET)
 
 qemufs: hypov
 	$(Q)$(QEMU32) -hda testfs.img
 
 bochs: hypov
 	$(Q)$(BOCHS)
+
+# The resulting ISO image could be both used for CD and pendrive installs
+# with ISO to pendrive image converters
+hypov.iso: hypov
+	$(Q)cp $(BINARY_TARGET) etc/grub/boot/
+	$(Q)$(GRUB_MKRESCUE) -o $@ etc/grub/
+
+iso: hypov.iso
 
 # The actual objects are generated when descending, 
 # make sure no implicit rule kicks in
@@ -394,7 +406,7 @@ $(sort $(hypov-all)): $(hypov-dirs) ;
 
 #PHONY += $(vmlinux-dirs)
 #$(vmlinux-dirs): prepare scripts
-PHONY += $(hypov-dirs)
+PHONY += $(hypov-dirs) iso bochs qemu qemufs
 $(hypov-dirs): scripts_basic
 	$(Q)$(MAKE) $(build)=$@
 
@@ -407,7 +419,7 @@ $(hypov-dirs): scripts_basic
 
 # Directories & files removed with 'make clean'
 CLEAN_DIRS  += 
-CLEAN_FILES +=	hypov.bin
+CLEAN_FILES +=	$(BINARY_TARGET) hypov.iso etc/grub/boot/$(BINARY_TARGET)
 
 # Directories & files removed with 'make mrproper'
 MRPROPER_DIRS  += include/config include/generated
@@ -484,7 +496,8 @@ help:
 	@echo  ''
 	@echo  'Other generic targets:'
 	@echo  '  all		  - Build all targets marked with [*]'
-	@echo  '* hypov	  	  - Build the application'
+	@echo  '* hypov	  	  - Build the hypervisor'
+	@echo  '  iso  	  	  - Create a bootable ISO image for CDs and pendrives'
 	@echo  '  dir/            - Build all files in dir and below'
 	@echo  '  dir/file.[oisS] - Build specified target only'
 	@echo  '  dir/file.lst    - Build specified mixed source/assembly target only'
