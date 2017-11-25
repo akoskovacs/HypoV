@@ -5,15 +5,7 @@ before_script:
     - make -v
 
 stages:
-    - build
     - package
-
-build_job:
-    stage: build
-    script:
-    - make
-    only:
-    - master
 
 package:
     stage: package
@@ -22,3 +14,5 @@ package:
     artifacts:
         paths:
         - hypov.iso
+        - hypov.bin
+        - HypoV.map
