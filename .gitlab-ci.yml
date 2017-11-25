@@ -1,5 +1,5 @@
 before_script:
-    - apt-get update -qq && apt-get -y -qq install build-essential nasm grub-common
+    - apt-get update -qq && apt-get -y -qq install build-essential nasm grub-common xorriso
     - gcc --version
     - nasm -v
     - make -v
@@ -11,13 +11,14 @@ stages:
 build_job:
     stage: build
     script:
-        - make
+    - make
     only:
-        - master
+    - master
 
 package:
     stage: package
-    script: make iso
+    script:
+    - make iso
     artifacts:
         paths:
         - hypov.iso
