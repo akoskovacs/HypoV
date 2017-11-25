@@ -6,7 +6,6 @@ before_script:
 
 stages:
     - build
-    - isogen
 
 build_job:
     stage: build
@@ -15,9 +14,8 @@ build_job:
     only:
         - master
 
-isogen_job:
-    stage: isogen
-    script:
-        - make iso
-    only:
-        - master
+package:
+    script: make iso
+    artifacts:
+        paths:
+            - hypov.iso
