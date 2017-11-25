@@ -39,7 +39,7 @@ struct __packed MultiBootElfSection {
     uint32_t shndx;
 };
 
-struct __packed MultiBootMmapEntry {
+struct __packed MultiBootMMapEntry {
     uint32_t size;
     uint64_t addr;
     uint64_t length;
