@@ -6,6 +6,7 @@ before_script:
 
 stages:
     - build
+    - package
 
 build_job:
     stage: build
@@ -15,7 +16,8 @@ build_job:
         - master
 
 package:
+    stage: package
     script: make iso
     artifacts:
         paths:
-            - hypov.iso
+        - hypov.iso
