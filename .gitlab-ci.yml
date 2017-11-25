@@ -1,0 +1,10 @@
+before_script:
+    - apt-get update -qq && apt-get -y -qq install build-essentials nasm
+    - gcc --version
+    - nasm -v
+    - make -v
+
+build:
+    hypov_bin:
+        - make
+
