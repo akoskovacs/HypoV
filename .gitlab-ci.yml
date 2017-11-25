@@ -1,11 +1,12 @@
 before_script:
-    - apt-get update -qq && apt-get -y -qq install build-essential nasm
+    - apt-get update -qq && apt-get -y -qq install build-essential nasm grub-common
     - gcc --version
     - nasm -v
     - make -v
 
 stages:
     - build
+    - isogen
 
 build_job:
     stage: build
@@ -14,3 +15,9 @@ build_job:
     only:
         - master
 
+isogen_job:
+    stage: isogen
+    script:
+        - make iso
+    only:
+        - master
