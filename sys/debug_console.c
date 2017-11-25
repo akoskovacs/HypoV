@@ -6,11 +6,17 @@
  * +---------------------------------------------------------------------+
 */
 
+#include <types.h>
 #include <drivers/input/pc_keyboard.h>
 #include <debug_console.h>
 #include <print.h>
 #include <error.h>
 #include <system.h>
+#include <memory.h>
+
+#ifndef CONFIG_NR_MMAP_MAX_ENTRIES
+# define CONFIG_NR_MMAP_MAX_ENTRIES 10
+#endif
 
 enum DC_KEYS {
     DS_F1 = 1,
@@ -19,6 +25,9 @@ enum DC_KEYS {
     DS_F4,
     DS_F5
 };
+
+/* TODO: Delete this delay loop */
+#define KBD_DELAY() for (int i = 1; i < 5e7; i++)
 
 #define DECL_HANDLER_PROTOTYPES(scrname)                             \
     static int dc_##scrname##_info_show(struct DebugScreen *);       \
@@ -33,6 +42,7 @@ DECL_HANDLER_PROTOTYPES(guest);
 static struct ConsoleDisplay *current_display    = NULL;
 static struct DebugScreen *current_screen        = NULL;
 static struct MultiBootInfo *boot_info           = NULL;
+static struct PhysicalMMapping *sys_mmap         = NULL;
 
 static struct DebugScreen ds_screen[] = {
     { DS_F1, "HYPERVISOR", "Hypervisor info, settings and functions", dc_vmm_info_show, dc_vmm_handle_key },
@@ -43,13 +53,14 @@ static struct DebugScreen ds_screen[] = {
 };
 #define NR_SCREENS (sizeof(ds_screen)/sizeof(struct DebugScreen))
 
-int dc_start(struct ConsoleDisplay *disp, struct MultiBootInfo *mbi)
+int dc_start(struct ConsoleDisplay *disp, struct MultiBootInfo *mbi, struct PhysicalMMapping *mmap)
 {
     if (disp == NULL) {
         return -HV_ENODISP;
     }
     current_display = disp;
-    boot_info = mbi;
+    boot_info       = mbi;
+    sys_mmap        = mmap;
     /* Display the first screen */
     return dc_show_screen(ds_screen);
 }
@@ -125,7 +136,7 @@ int dc_bottom_menu_draw(struct DebugScreen *scr)
 
 int dc_keyboard_handler(char scancode)
 {
-    int i;
+    int ind;
     switch (scancode) {
         case KEY_F1:
         dc_show_screen(ds_screen);
@@ -149,11 +160,9 @@ int dc_keyboard_handler(char scancode)
 
         case KEY_TAB:
         if (current_screen) {
-            i = current_screen->dc_key % NR_SCREENS;
-            dc_show_screen(ds_screen+i);
-            /* TODO: Delete this delay loop */
-            for (i = 1; i < 5e7; i++)
-                ;
+            ind = current_screen->dc_key % NR_SCREENS;
+            dc_show_screen(ds_screen+ind);
+            KBD_DELAY();
         }
         return 0; 
     }
@@ -168,47 +177,49 @@ static int dc_vmm_info_show(struct DebugScreen *scr)
 {
     struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
     int row = 5;
+    const char *cmd_line = NULL;
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
     hv_console_set_xy(current_display, 10, row);
-    hv_disp_puts(cdisp, "Version");
+    hv_disp_puts(cdisp, "Version:");
     hv_console_set_xy(current_display, 30, row++);
     hv_disp_puts(cdisp, "0.1-prealpha");
 
     hv_console_set_xy(current_display, 10, row);
-    hv_disp_puts(cdisp, "Bit width");
+    hv_disp_puts(cdisp, "Architecture:");
     hv_console_set_xy(current_display, 30, row++);
-    hv_disp_puts(cdisp, "32 bit");
+    hv_printf(cdisp, "%d bit", sizeof(long)*8); // FIXME?
 
     hv_console_set_xy(current_display, 10, row);
-    hv_disp_puts(cdisp, "Built at");
+    hv_disp_puts(cdisp, "Built at:");
     hv_console_set_xy(current_display, 30, row++);
     hv_disp_puts(cdisp, __DATE__ ", " __TIME__);
 
     hv_console_set_xy(current_display, 10, row);
-    hv_disp_puts(cdisp, "Multiboot info");
+    hv_disp_puts(cdisp, "Multiboot info:");
     if (boot_info) {
         hv_console_set_xy(current_display, 30, row++);
         hv_disp_puts(cdisp, "Valid");
 
         if (boot_info->flags & MB_INFO_BOOTDEV) {
             hv_console_set_xy(current_display, 10, row);
-            hv_disp_puts(cdisp, "Boot device");
+            hv_disp_puts(cdisp, "BIOS boot device:");
             hv_console_set_xy(current_display, 30, row++);
-            hv_printf(cdisp, "0x%X", boot_info->boot_device);
+            hv_printf(cdisp, "%x", (char)boot_info->boot_device >> 24);
         }
 
         if (boot_info->flags & MB_INFO_BOOT_LOADER) {
             hv_console_set_xy(current_display, 10, row);
-            hv_disp_puts(cdisp, "Boot loader");
+            hv_disp_puts(cdisp, "Boot loader:");
             hv_console_set_xy(current_display, 30, row++);
             hv_printf(cdisp, "%s", (const char *)boot_info->boot_loader_name);
         }
 
         if (boot_info->flags & MB_INFO_CMDLINE) {
             hv_console_set_xy(current_display, 10, row);
-            hv_disp_puts(cdisp, "Boot command line");
+            hv_disp_puts(cdisp, "Boot command line:");
             hv_console_set_xy(current_display, 30, row++);
-            hv_printf(cdisp, "%s", (const char *)boot_info->cmdline);
+            cmd_line = (const char *)boot_info->cmdline;
+            hv_printf(cdisp, "%s", (cmd_line && cmd_line[0]) ? cmd_line : "<none>");
         }
     } else {
         hv_console_set_xy(current_display, 30, row++);
@@ -244,7 +255,7 @@ static int dc_cpu_info_show(struct DebugScreen *scr)
 
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
     hv_console_set_xy(current_display, 10, 5);
-    hv_disp_puts(cdisp, "Branding");
+    hv_disp_puts(cdisp, "Brand name:");
 
     hv_console_set_xy(current_display, 30, 5);
     if (branding_start == NULL) {
@@ -262,11 +273,11 @@ static int dc_cpu_info_show(struct DebugScreen *scr)
     hv_disp_puts(cdisp, branding_start);
 
     hv_console_set_xy(current_display, 10, 6);
-    hv_disp_puts(cdisp, "Vendor string");
+    hv_disp_puts(cdisp, "Vendor string:");
     hv_console_set_xy(current_display, 30, 6);
     hv_disp_puts(cdisp, vendor);
 
-    return -HV_ENOIMPL;
+    return 0;
 }
 
 static int dc_cpu_handle_key(struct DebugScreen *scr, char key)
@@ -274,55 +285,88 @@ static int dc_cpu_handle_key(struct DebugScreen *scr, char key)
     return -HV_ENOIMPL;
 }
 
-static void mem_info_dump(struct DebugScreen *scr, struct MultiBootInfo *mbi, int row)
+/* Eh, too many entries needs scrolling */
+static int ind_mmap_page = 0;
+static int nr_mmap_pages = 0;
+static void dc_mem_show_scrolling(void)
 {
-    typedef struct MultiBootMmapEntry MMapEntry;
-
     struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
-    MMapEntry *mmap = (MMapEntry *)mbi->mmap_addr;
+    hv_console_set_xy(current_display, 10, 20);
+    hv_printf(cdisp, "Got %d memory regions, %d shown on page (%d/%d)"
+        , sys_mmap->sm_nr_maps, CONFIG_NR_MMAP_MAX_ENTRIES, ind_mmap_page+1, nr_mmap_pages);
+    hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT);
+    hv_console_set_xy(current_display, 10, 21);
+    hv_disp_puts(cdisp, "[Space] - Press space for more entries");
+}
 
-    uint64_t length_addr;
-    unsigned int size;
-
-    bochs_breakpoint();
-
+static bool is_mmap_needs_scrolling = false;
+static void mem_info_dump(struct DebugScreen *scr, struct PhysicalMMapping *phymm, int row)
+{
+    int i;
+    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+    int nr_skip = ind_mmap_page*CONFIG_NR_MMAP_MAX_ENTRIES;
+    struct MemoryMap *mmap = phymm->sm_maps+nr_skip;
+    uint64_t size;
+    
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
-    while (mmap < (MMapEntry *)(mbi->mmap_addr + mbi->mmap_length)) {
-        length_addr = mmap->addr + mmap->length;
-        size        = mmap->length/1024;
-        if (size != 0 && mmap->addr != 0 && length_addr != 0) {
-            hv_console_set_xy(current_display, 10, row++);
-            //hv_disp_puts(cdisp, "mem address");
-            hv_printf(cdisp, "0x%X%X - 0x%X%X, size %d KB [%s]"
-                , mmap->addr, length_addr, size
-                , (mmap->type == MB_MEMORY_RESERVED) ? "reserved" : "available");
-        }
-
-        mmap += mmap->size; // + sizeof(mmap->size);
+    for (i = 0; (i < nr_skip+phymm->sm_nr_maps) && (i < CONFIG_NR_MMAP_MAX_ENTRIES); i++, mmap++) {
+        size = (mmap->mm_end - mmap->mm_start);
+        hv_console_set_xy(current_display, 10, row);
+        hv_printf(cdisp, "0x%X%X", mmap->mm_start);
+        hv_console_set_xy(current_display, 25, row);
+        hv_printf(cdisp, "0x%X%X", mmap->mm_end);
+        hv_console_set_xy(current_display, 40, row);
+        hv_printf(cdisp, "%d KB", size / 1024);
+        hv_console_set_xy(current_display, 55, row++);
+        hv_printf(cdisp, "[%s]", ((mmap->mm_flags & MM_RESERVED) ? "reserved" : "free"));
     }
 }
 
 static int dc_mem_info_show(struct DebugScreen *scr)
 {
     struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
-    unsigned int mem = 0;
+    size_t sz_mem = 0;
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT);
     hv_console_set_xy(current_display, 10, 5);
-    if ((boot_info != NULL) && (boot_info->flags & MB_INFO_MEM_MAP)) {
-        mem = boot_info->mem_lower + boot_info->mem_upper;
-        hv_disp_puts(cdisp, "Total memory");
-        hv_console_set_xy(current_display, 30, 5);
-        hv_printf(cdisp, "%d KB (%d MB)", mem, mem/1024);
-        mem_info_dump(scr, boot_info, 6);
+    /* Set the maximum available screen lines for the entries */
+    nr_mmap_pages           = sys_mmap->sm_nr_maps / CONFIG_NR_MMAP_MAX_ENTRIES;
+    /* We need one more screen page if the number of regions cannot be divided with *_MAX_ENTRIES without remainder */
+    nr_mmap_pages          += (sys_mmap->sm_nr_maps % CONFIG_NR_MMAP_MAX_ENTRIES) > 0;
+    is_mmap_needs_scrolling = nr_mmap_pages > 1;
+
+    if ((boot_info != NULL) && (sys_mmap != NULL) && (boot_info->flags & MB_INFO_MEMORY) 
+            && (boot_info->flags & MB_INFO_MEM_MAP)) {
+        sz_mem = boot_info->mem_lower + boot_info->mem_upper;
+        hv_disp_puts(cdisp, "Total memory (according to BIOS):");
+        hv_console_set_xy(current_display, 45, 5);
+        hv_printf(cdisp, "%d KB (%d MB)", sz_mem, sz_mem / 1024);
+        mem_info_dump(scr, sys_mmap, 7);
+        if (is_mmap_needs_scrolling) {
+            dc_mem_show_scrolling();
+        } else {
+            hv_console_set_xy(current_display, 10, 20);
+            hv_printf(cdisp, "Got %d memory regions ", sys_mmap->sm_nr_maps);
+        }
     } else {
         hv_disp_puts(cdisp, "No memory information provided by the bootloader");
     }
-    return -HV_ENOIMPL;
+    return 0;
 }
 
 static int dc_mem_handle_key(struct DebugScreen *scr, char key)
 { 
-    return -HV_ENOIMPL; 
+    if (is_mmap_needs_scrolling) {
+        if (key == KEY_SPACE) {
+            if (ind_mmap_page < nr_mmap_pages-1) {
+                ind_mmap_page++;
+            } else {
+                ind_mmap_page = 0;
+            }
+            dc_show_screen(scr);
+            KBD_DELAY();
+        }
+    }
+    return 0;
 }
 
 static int dc_disk_info_show(struct DebugScreen *scr) 

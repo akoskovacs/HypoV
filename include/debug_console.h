@@ -13,6 +13,7 @@
 #include <boot/multiboot.h>
 
 struct DebugScreen;
+struct PhysicalMMapping;
 
 typedef int (*dc_draw_screen_ft)(struct DebugScreen *);
 typedef int (*dc_handle_key_ft)(struct DebugScreen *, char key);
@@ -32,7 +33,7 @@ struct DebugScreen {
     #endif
 };
 
-int dc_start(struct ConsoleDisplay *, struct MultiBootInfo *mbi);
+int dc_start(struct ConsoleDisplay *, struct MultiBootInfo *mbi, struct PhysicalMMapping *mmap);
 int dc_init(struct ConsoleDisplay *);
 int dc_show_screen(struct DebugScreen *);
 int dc_top_menu_draw(struct DebugScreen *);
