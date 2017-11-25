@@ -45,24 +45,24 @@ SECTIONS
         __text_end = .;
     }
     
-    .rodata BLOCK(4K) : ALIGN(4K)
+    .rodata : ALIGN(4K)
     {
         *(.rodata)
     }
 
-    .data BLOCK(4K) : ALIGN(4K)
+    .data : ALIGN(4K)
     {
         *(.data)
     }
 
-    .bss BLOCK(4K) : ALIGN(4K)
+    .bss : ALIGN(4K)
     {
         *(.COMMON)
         *(.bss)
+        __image_end = .;
     }
     .note ALIGN(4K) :
     {
         *(.note.gnu.build-id)
-        __image_end = .;
     }
 }
