@@ -15,6 +15,5 @@ config CROSS_COMPILE
 	  directory to select the cross-compiler automatically.
 
 source "boot/Kconfig"
+source "sys/Kconfig"
 source "lib/Kconfig"
-
-# TODO
