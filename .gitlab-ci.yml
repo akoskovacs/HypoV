@@ -1,10 +1,16 @@
 before_script:
-    - apt-get update -qq && apt-get -y -qq install build-essentials nasm
+    - apt-get update -qq && apt-get -y -qq install build-essential nasm
     - gcc --version
     - nasm -v
     - make -v
 
-build:
-    hypov_bin:
+stages:
+    - build
+
+build_job:
+    stage: build
+    script:
         - make
+    only:
+        - master
 
