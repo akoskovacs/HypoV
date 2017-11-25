@@ -69,6 +69,7 @@ enum KEYBOARD_KEY_INDEX {
 
 typedef int (*key_handler_ft)(char scancode);
 
+int  keyboard_init(void);
 void keyboard_set_keymap(const char *);
 char keyboard_get_scancode(void);
 char keyboard_scancode_for(enum KEYBOARD_KEY_INDEX spec_key);

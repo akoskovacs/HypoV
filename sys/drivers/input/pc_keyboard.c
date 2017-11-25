@@ -10,6 +10,7 @@
 #include <drivers/input/pc_keyboard.h>
 
 #define KBD_CMD_REBOOT 0xFE
+#define KBD_CMD  0x64
 #define KBD_PORT 0x60
 
 /* TODO... */
@@ -71,6 +72,24 @@ static const char *kbd_keymap = kbd_hu_keymap;
 static const char *kbd_spec_keys = kbd_hu_spec_keys;
 static size_t kbd_keymap_size = KBD_HU_KEYMAP_SIZE;
 
+static void keyboard_flush(void)
+{
+    while (inb(KBD_CMD) & 1)
+        inb(KBD_PORT);
+}
+
+int keyboard_init(void)
+{
+    bochs_breakpoint();
+    keyboard_flush();
+    /* Set up the scan rate command */
+    outb(KBD_CMD, 0xF3);
+    /* 2Hz with 750ms delay */
+    outb(KBD_PORT, 0x2F);
+    /* TODO: Check status code */
+    return 0;
+}
+
 void keyboard_set_keymap(const char *map_name)
 {
     if (map_name[0] == 'H' && map_name[1] == 'U' 
@@ -96,6 +115,7 @@ char keyboard_get_scancode(void)
         if (inb(KBD_PORT) != c) {
             c = inb(KBD_PORT);
             if (c > 0) {
+                keyboard_flush();
                 return c;
             }
         }
