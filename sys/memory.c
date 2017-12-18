@@ -71,7 +71,7 @@ struct PhysicalMMapping *hv_mm_init_mapping(struct MultiBootInfo *mbi)
     struct MemoryMap *sm_map;
     int nr_map;
 
-    if ((mbi == NULL) && (mbi->flags & MB_INFO_MEM_MAP)) {
+    if (!mbi || !(mbi->flags & MB_INFO_MEM_MAP)) {
         return NULL;
     }
     nr_map  = mb_get_mmap_nr_entries(mbi);
