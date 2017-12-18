@@ -6,6 +6,7 @@
  * +---------------------------------------------------------------------+
 */
 
+#include <cpu.h>
 #include <types.h>
 #include <drivers/input/pc_keyboard.h>
 #include <debug_console.h>
@@ -43,6 +44,7 @@ static struct ConsoleDisplay *current_display    = NULL;
 static struct DebugScreen *current_screen        = NULL;
 static struct MultiBootInfo *boot_info           = NULL;
 static struct PhysicalMMapping *sys_mmap         = NULL;
+static struct CpuInfo cpu_info;
 
 static struct DebugScreen ds_screen[] = {
     { DS_F1, "HYPERVISOR", "Hypervisor info, settings and functions", dc_vmm_info_show, dc_vmm_handle_key },
@@ -61,6 +63,9 @@ int dc_start(struct ConsoleDisplay *disp, struct MultiBootInfo *mbi, struct Phys
     current_display = disp;
     boot_info       = mbi;
     sys_mmap        = mmap;
+
+    cpu_set_info(&cpu_info);
+
     /* Display the first screen */
     return dc_show_screen(ds_screen);
 }
@@ -204,7 +209,8 @@ static int dc_vmm_info_show(struct DebugScreen *scr)
             hv_console_set_xy(current_display, 10, row);
             hv_disp_puts(cdisp, "BIOS boot device:");
             hv_console_set_xy(current_display, 30, row++);
-            hv_printf(cdisp, "%x", (char)boot_info->boot_device >> 24);
+            //hv_printf(cdisp, "%x", (char)boot_info->boot_device >> 24);
+            hv_printf(cdisp, "%x", boot_info->boot_device);
         }
 
         if (boot_info->flags & MB_INFO_BOOT_LOADER) {
@@ -246,37 +252,55 @@ static int dc_vmm_handle_key(struct DebugScreen *scr, char key)
     return 0;
 }
 
+static void cpu_info_show_feature(int *line, uint64_t feature, const char *feature_name)
+{
+    struct CharacterDisplay *cdisp  = (struct CharacterDisplay *)current_display;
+    if (cpu_info.ci_features & feature) {
+        hv_console_set_xy(current_display, 20, *line);
+        hv_disp_puts(cdisp, feature_name);
+        (*line)++;
+    }
+}
+
 static int dc_cpu_info_show(struct DebugScreen *scr)
 {
-    static char vendor[13];
-    static char branding[49];
-    static char *branding_start = NULL;
-    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+    int line = 5;
+    struct CharacterDisplay *cdisp  = (struct CharacterDisplay *)current_display;
 
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
-    hv_console_set_xy(current_display, 10, 5);
+    hv_console_set_xy(current_display, 10, line);
+    hv_disp_puts(cdisp, "Family:");
+    hv_printf_xy(cdisp, 29, line++, "%d", cpu_info.ci_family);
+
+    hv_console_set_xy(current_display, 10, line);
+    hv_disp_puts(cdisp, "Model:");
+    hv_printf_xy(cdisp, 29, line++, "%d", cpu_info.ci_model);
+
+    hv_console_set_xy(current_display, 10, line);
+    hv_disp_puts(cdisp, "Stepping:");
+    hv_printf_xy(cdisp, 29, line++, "%d", cpu_info.ci_stepping);
+
+    hv_console_set_xy(current_display, 10, line);
     hv_disp_puts(cdisp, "Brand name:");
+    hv_console_set_xy(current_display, 30, line++);
+    hv_disp_puts(cdisp, cpu_info.ci_branding);
 
-    hv_console_set_xy(current_display, 30, 5);
-    if (branding_start == NULL) {
-        cpuid_get_branding(branding);
-        branding_start = branding;
-        /* The branding string is padded with spaces from
-           the beginning, skip that */
-        while (*branding_start == ' ') {
-            branding_start++;
-        }
-
-        cpuid_get_vendor(vendor);
-    }
-
-    hv_disp_puts(cdisp, branding_start);
-
-    hv_console_set_xy(current_display, 10, 6);
+    hv_console_set_xy(current_display, 10, line);
     hv_disp_puts(cdisp, "Vendor string:");
-    hv_console_set_xy(current_display, 30, 6);
-    hv_disp_puts(cdisp, vendor);
+    hv_console_set_xy(current_display, 30, line++);
+    hv_disp_puts(cdisp, cpu_info.ci_vendor);
 
+    hv_console_set_xy(current_display, 10, ++line);
+    hv_disp_puts(cdisp, "CPU features:");
+    line++;
+
+    cpu_info_show_feature(&line, CPU_FEATURE_PAE, "Physical address extension");
+    cpu_info_show_feature(&line, CPU_FEATURE_VMX, "Hardware-assisted virtualization");
+
+    if (cpu_info.ci_features & CPU_FEATURE_HVISOR) {
+        hv_console_set_xy(current_display, 10, ++line);
+        hv_disp_puts(cdisp, "Seems to be running under virtualization :-(");
+    }
     return 0;
 }
 
