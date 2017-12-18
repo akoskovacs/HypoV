@@ -383,6 +383,9 @@ qemu: hypov
 qemufs: hypov
 	$(Q)$(QEMU32) -hda testfs.img
 
+qemuiso: hypov.iso
+	$(Q)$(QEMU32) -cdrom $^
+
 bochs: hypov
 	$(Q)$(BOCHS)
 
