@@ -290,10 +290,10 @@ static int dc_cpu_info_show(struct DebugScreen *scr)
     hv_console_set_xy(current_display, 30, line++);
     hv_disp_puts(cdisp, cpu_info.ci_vendor);
 
-    hv_console_set_xy(current_display, 10, ++line);
+    hv_console_set_xy(current_display, 10, line++);
     hv_disp_puts(cdisp, "CPU features:");
-    line++;
 
+    cpu_info_show_feature(&line, CPU_FEATURE_IA64, "64-bit architecture");
     cpu_info_show_feature(&line, CPU_FEATURE_PAE, "Physical address extension");
     cpu_info_show_feature(&line, CPU_FEATURE_VMX, "Hardware-assisted virtualization");
 
