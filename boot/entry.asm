@@ -10,6 +10,7 @@
 global hv_multiboot_entry
 global hv_multiboot_header
 extern hv_entry
+extern sys_chainload
 
 ; Multiboot definitions
 %define MB_ALIGN        0x001
@@ -18,6 +19,8 @@ extern hv_entry
 
 %define MB_MAGIC        0x1BADB002
 %define MB_CHECKSUM     ~(MB_MAGIC + MB_FLAGS)+1
+
+%define MB_LDR_MAGIC    0x2BADB002
 
 ; Multiboot header start
 align 4
@@ -46,19 +49,18 @@ hv_multiboot_entry:
 ; The stack grows down from the reserved area
     mov esp, hv_stack+CONFIG_STACK_SIZE
     mov ebp, esp
-; Push the arguments for the C function
-; If the magic number is wrong, make multiboot info pointer NULL
-    cmp eax, MB_MAGIC
-    je .magic_good
-    push 0
-    jmp .load_magic
-.magic_good:
-    push eax
-.load_magic:
+; If the magic number is wrong, we can't trust the bootloader 
+; anymore. Abort booting and try to chainload something else.
+    cmp eax, MB_LDR_MAGIC
+    jne .panic_chainload
+; Pass struct MultiBootInfo * on the stack
     push ebx
-; Call the 32 bit C entry function in sys/init.c
-; hv_entry(struct MultiBootInfo *, int magic)
+; Call the 32 bit C entry function from sys/init.c
+; hv_entry(struct MultiBootInfo *)
     call hv_entry
+.panic_chainload:
+    call sys_chainload
+; Something went wrong somewhere
 .hang:
     jmp .hang
 

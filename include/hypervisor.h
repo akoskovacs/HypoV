@@ -10,6 +10,6 @@
 
 struct MultiBootInfo;
 
-void hv_entry(struct MultiBootInfo *, unsigned int);
+void hv_entry(struct MultiBootInfo *);
 
 #endif // HYPERVISOR_H

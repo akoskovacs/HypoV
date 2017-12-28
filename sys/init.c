@@ -14,8 +14,7 @@
 #include <debug_console.h>
 #include <memory.h>
 
-/* If the magic number is wrong, mbi will be NULL */
-void __noreturn hv_entry(struct MultiBootInfo *mbi, unsigned int magic)
+void __noreturn hv_entry(struct MultiBootInfo *mbi)
 {
     struct ConsoleDisplay main_display;
     struct CharacterDisplay *disp = (struct CharacterDisplay *)&main_display;
