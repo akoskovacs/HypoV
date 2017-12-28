@@ -16,5 +16,8 @@ rm -rf $TMP
 
 echo
 echo "You can test the setup, issuing: "
+echo "$ make qemufs"
+echo "    or"
 echo "$ qemu-system-i386 -hda $TESTFS_NAME"
+
 

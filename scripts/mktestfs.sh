@@ -5,7 +5,7 @@
 
 TESTFS_NAME=testfs.img
 TESTFS_LABEL=PENDRIVE
-TESTFS_SIZE=65M
+TESTFS_SIZE=64M
 TMP=/tmp/fs
 
 echo "Making FAT32 filesystem '$TESTFS_NAME'..."
@@ -26,5 +26,7 @@ rm -rf $TMP
 
 echo
 echo "You can test the setup, issuing: "
+echo "$ make qemufs"
+echo "    or"
 echo "$ qemu-system-i386 -hda $TESTFS_NAME"
 
