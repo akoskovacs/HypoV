@@ -30,6 +30,7 @@ int cpuid_get_vendor(char vendor[13])
 
     /* cpuid() function gives { EAX, EBX, ECX, EDX }, but the
        vendor id string is in { EBX, EDX, ECX } order */
+
     cpuid(0, vend);
 
     /* Swap EDX with ECX */
