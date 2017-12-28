@@ -12,6 +12,7 @@ SHARED_FLAGS += -fno-asynchronous-unwind-tables -ffreestanding -Wl,-melf_i386 -m
 SHARED_FLAGS += -nostartfiles -nodefaultlibs -nostdlib -static -mno-80387 -mno-fp-ret-in-387
 
 BINARY_TARGET := hypov.bin
+TESTFS 		  := testfs.img
 
 # To put more focus on warnings, be less verbose as default
 # Use 'make V=1' to see the full commands
@@ -395,7 +396,13 @@ hypov.iso: hypov
 	$(Q)cp $(BINARY_TARGET) etc/grub/boot/
 	$(Q)$(GRUB_MKRESCUE) -o $@ etc/grub/
 
+$(TESTFS): hypov
+	./scripts/mktestfs.sh
+
 iso: hypov.iso
+mkfs: $(TESTFS)
+upfs:
+	./scripts/updatefs.sh
 
 # The actual objects are generated when descending, 
 # make sure no implicit rule kicks in
@@ -409,7 +416,7 @@ $(sort $(hypov-all)): $(hypov-dirs) ;
 
 #PHONY += $(vmlinux-dirs)
 #$(vmlinux-dirs): prepare scripts
-PHONY += $(hypov-dirs) iso bochs qemu qemufs
+PHONY += $(hypov-dirs) iso bochs qemu qemufs mkfs upfs
 $(hypov-dirs): scripts_basic
 	$(Q)$(MAKE) $(build)=$@
 
@@ -501,6 +508,8 @@ help:
 	@echo  '  all		  - Build all targets marked with [*]'
 	@echo  '* hypov	  	  - Build the hypervisor'
 	@echo  '  iso  	  	  - Create a bootable ISO image for CDs and pendrives'
+	@echo  '  mkfs 	  	  - Create a FAT32 test filesystem to use with SYSLINUX'
+	@echo  '  upfs 	  	  - Update the FAT32 test filesystem if something is changed'
 	@echo  '  dir/            - Build all files in dir and below'
 	@echo  '  dir/file.[oisS] - Build specified target only'
 	@echo  '  dir/file.lst    - Build specified mixed source/assembly target only'
