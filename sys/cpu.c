@@ -57,7 +57,7 @@ int cpu_set_info(struct CpuInfo *info)
     info->ci_stepping = GET_STEPPING(regs[CPUID_REG_EAX]);
     info->ci_family   = GET_FAMILY(regs[CPUID_REG_EAX]);
     info->ci_model    = GET_MODEL(regs[CPUID_REG_EAX]);
-    info->ci_features = regs[CPUID_REG_EDX] | (regs[CPUID_REG_ECX] << 31);
+    info->ci_features = regs[CPUID_REG_EDX] | (((uint64_t)regs[CPUID_REG_ECX]) << 32);
 
     return 0;
 }
