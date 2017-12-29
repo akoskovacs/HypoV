@@ -17,7 +17,13 @@ enum HV_ERROR {
     HV_ENODISP = 1, // No display, or NULL
     HV_ENOIMPL,     // Function not implemented
     HV_BADARG,      // Bad argument for the function
+    HV_ENOMEM,      // Cannot allocate enough memory
+    HV_ENOVALID,    // The data used is not valid
+    HV_EMISALIGN,   // Pointer/address is misaligned
     HV_ETOOLONG     // Coordinates are out of scope
 };
+
+/* eptr is an int *, error is an error from the enum above */
+#define SET_ERROR(eptr, error) (if (error) (*(eptr)) = error)
 
 #endif // HV_ERROR_H

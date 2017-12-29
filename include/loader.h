@@ -18,6 +18,7 @@ struct Elf64_Image
     void (*i_entry)(void);
 };
 
+bool elf64_is_header_valid(struct Elf64_Hdr *header);
 struct Elf64_Image *elf64_load(void *image_begin, pa_t target, int *error);
 
 #endif // LOADER_H
