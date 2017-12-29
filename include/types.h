@@ -24,7 +24,22 @@ typedef signed short int int16_t;
 typedef signed int int32_t;
 typedef signed long long int64_t;
 
+#ifndef __cplusplus
 typedef enum { false, true } bool;
+#endif // __cplusplus
+
+/* Hypervisor (host) physical addres */
+typedef long hpa_t;
+typedef hpa_t pa_t;
+/* Hypervisor (host) virtual addres */
+typedef uint64_t hva_t;
+typedef hva_t va_t;
+
+/* Guest OS physical addres */
+typedef uint64_t gpa_t;
+/* Guest OS physical addres */
+typedef uint64_t gva_t;
+
 #endif
 
 #endif // TYPES_H
