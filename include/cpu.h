@@ -167,16 +167,16 @@ enum MSR_IA32_EFER_FLAGS {
 
 struct CpuInfo
 {
-    char               *ci_vendor;
-    char               *ci_branding;
-    int                 ci_family;
-    int                 ci_stepping;
-    int                 ci_model;
-    int                 ci_processor_type;
-    int                 ci_ext_model_id;
-    int                 ci_ext_family_id;
-    int                 ci_brand_index; // TODO
-    uint64_t            ci_features;
+    char    *ci_vendor;
+    char    *ci_branding;
+    int      ci_family;
+    int      ci_stepping;
+    int      ci_model;
+    int      ci_processor_type;
+    int      ci_ext_model_id;
+    int      ci_ext_family_id;
+    int      ci_brand_index; // TODO
+    uint64_t ci_features;
 };
 
 struct CpuInfo *cpu_get_info(void);
