@@ -9,6 +9,18 @@
 #define HYPERVISOR_H
 
 struct MultiBootInfo;
+struct CharacterDisplay;
+struct CpuInfo;
+struct PhysicalMMapping;
+struct Elf64_Image;
+
+struct SystemInfo {
+    struct MultiBootInfo    *s_boot_info;
+    struct CharacterDisplay *s_display;
+    struct CpuInfo          *s_cpu_info;
+    struct PhysicalMMapping *s_phy_maps;
+    struct Elf64_Image      *s_core_image;
+};
 
 void hv_entry(struct MultiBootInfo *);
 

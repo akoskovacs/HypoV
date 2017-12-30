@@ -11,6 +11,7 @@
 #include <drivers/video/pc_console.h>
 #include <types.h>
 #include <boot/multiboot.h>
+#include <hypervisor.h>
 
 struct DebugScreen;
 struct PhysicalMMapping;
@@ -33,7 +34,7 @@ struct DebugScreen {
     #endif
 };
 
-int dc_start(struct ConsoleDisplay *, struct MultiBootInfo *mbi, struct PhysicalMMapping *mmap);
+int dc_start(struct SystemInfo *info);
 int dc_init(struct ConsoleDisplay *);
 int dc_show_screen(struct DebugScreen *);
 int dc_top_menu_draw(struct DebugScreen *);

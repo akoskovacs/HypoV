@@ -6,6 +6,7 @@
  * +---------------------------------------------------------------------+
 */
 
+#include <hypervisor.h>
 #include <cpu.h>
 #include <types.h>
 #include <drivers/input/pc_keyboard.h>
@@ -40,12 +41,6 @@ DECL_HANDLER_PROTOTYPES(mem);
 DECL_HANDLER_PROTOTYPES(disk);
 DECL_HANDLER_PROTOTYPES(guest);
 
-static struct ConsoleDisplay *current_display    = NULL;
-static struct DebugScreen *current_screen        = NULL;
-static struct MultiBootInfo *boot_info           = NULL;
-static struct PhysicalMMapping *sys_mmap         = NULL;
-static struct CpuInfo cpu_info;
-
 static struct DebugScreen ds_screen[] = {
     { DS_F1, "HYPERVISOR", "Hypervisor info, settings and functions", dc_vmm_info_show, dc_vmm_handle_key },
     { DS_F2, "CPU", "Physical CPU information", dc_cpu_info_show, dc_cpu_handle_key },
@@ -55,16 +50,18 @@ static struct DebugScreen ds_screen[] = {
 };
 #define NR_SCREENS (sizeof(ds_screen)/sizeof(struct DebugScreen))
 
-int dc_start(struct ConsoleDisplay *disp, struct MultiBootInfo *mbi, struct PhysicalMMapping *mmap)
+static struct DebugScreen *current_screen = NULL;
+static struct SystemInfo *sys_info = NULL;
+int dc_start(struct SystemInfo *info)
 {
-    if (disp == NULL) {
-        return -HV_ENODISP;
+    if (info == NULL) {
+        return -HV_ENOINFO;
+    } else {
+        if (info->s_display == NULL) {
+            return -HV_ENODISP;
+        }
     }
-    current_display = disp;
-    boot_info       = mbi;
-    sys_mmap        = mmap;
-
-    cpu_set_info(&cpu_info);
+    sys_info = info;
 
     /* Display the first screen */
     return dc_show_screen(ds_screen);
@@ -76,7 +73,7 @@ int dc_show_screen(struct DebugScreen *scr)
         return -HV_ENODISP;
     }
     current_screen = scr;
-    hv_console_clear((struct CharacterDisplay *)current_display);
+    hv_console_clear(sys_info->s_display);
     dc_top_menu_draw(scr);
     dc_bottom_menu_draw(scr);
     return scr->dc_draw_handler(scr);
@@ -87,7 +84,8 @@ int dc_top_menu_draw(struct DebugScreen *scr)
     char sw_tmpl[] = " F1 - ";
     const char branding[] = " HypoV ";
     int i;
-    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+    struct CharacterDisplay *cdisp = sys_info->s_display;
+    struct ConsoleDisplay *current_display = (struct ConsoleDisplay *)cdisp;
 
     hv_console_set_attribute(current_display, FG_COLOR_BROWN | BG_COLOR_BLACK | LIGHT);
     hv_console_fill_line(current_display, 0, 0, CONSOLE_WIDTH(current_display));
@@ -116,7 +114,8 @@ int dc_top_menu_draw(struct DebugScreen *scr)
 
 int dc_bottom_show_message(struct DebugScreen *scr, const char *message)
 {
-    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+    struct CharacterDisplay *cdisp = sys_info->s_display;
+    struct ConsoleDisplay *current_display = (struct ConsoleDisplay *)cdisp;
 
     hv_console_set_xy(current_display, 1, CONSOLE_LAST_ROW(current_display));
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_BROWN | LIGHT);
@@ -129,7 +128,8 @@ int dc_bottom_show_message(struct DebugScreen *scr, const char *message)
 int dc_bottom_menu_draw(struct DebugScreen *scr)
 {
     const char copyright[] = "Copyright (C) Akos Kovacs ";
-    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+    struct CharacterDisplay *cdisp = sys_info->s_display;
+    struct ConsoleDisplay *current_display = (struct ConsoleDisplay *)cdisp;
     int x = CONSOLE_WIDTH(current_display) - sizeof(copyright);
 
     dc_bottom_show_message(scr, scr->dc_help);
@@ -180,7 +180,9 @@ int dc_keyboard_handler(char scancode)
 
 static int dc_vmm_info_show(struct DebugScreen *scr)
 {
-    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+    struct MultiBootInfo *boot_info = sys_info->s_boot_info;
+    struct CharacterDisplay *cdisp  = sys_info->s_display;
+    struct ConsoleDisplay *current_display = (struct ConsoleDisplay *)cdisp;
     int row = 5;
     const char *cmd_line = NULL;
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
@@ -254,8 +256,10 @@ static int dc_vmm_handle_key(struct DebugScreen *scr, char key)
 
 static void cpu_info_show_feature(int *line, uint64_t feature, const char *feature_name)
 {
-    struct CharacterDisplay *cdisp  = (struct CharacterDisplay *)current_display;
-    if (cpu_info.ci_features & feature) {
+    struct CpuInfo *cpu_info       = sys_info->s_cpu_info;
+    struct CharacterDisplay *cdisp = sys_info->s_display;
+    struct ConsoleDisplay *current_display = (struct ConsoleDisplay *)cdisp;
+    if (cpu_info->ci_features & feature) {
         hv_console_set_xy(current_display, 20, *line);
         hv_disp_puts(cdisp, feature_name);
         (*line)++;
@@ -265,30 +269,32 @@ static void cpu_info_show_feature(int *line, uint64_t feature, const char *featu
 static int dc_cpu_info_show(struct DebugScreen *scr)
 {
     int line = 5;
-    struct CharacterDisplay *cdisp  = (struct CharacterDisplay *)current_display;
+    struct CpuInfo *cpu_info       = sys_info->s_cpu_info;
+    struct CharacterDisplay *cdisp = sys_info->s_display;
+    struct ConsoleDisplay *current_display = (struct ConsoleDisplay *)cdisp;
 
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
     hv_console_set_xy(current_display, 10, line);
     hv_disp_puts(cdisp, "Family:");
-    hv_printf_xy(cdisp, 29, line++, "%d", cpu_info.ci_family);
+    hv_printf_xy(cdisp, 29, line++, "%d", cpu_info->ci_family);
 
     hv_console_set_xy(current_display, 10, line);
     hv_disp_puts(cdisp, "Model:");
-    hv_printf_xy(cdisp, 29, line++, "%d", cpu_info.ci_model);
+    hv_printf_xy(cdisp, 29, line++, "%d", cpu_info->ci_model);
 
     hv_console_set_xy(current_display, 10, line);
     hv_disp_puts(cdisp, "Stepping:");
-    hv_printf_xy(cdisp, 29, line++, "%d", cpu_info.ci_stepping);
+    hv_printf_xy(cdisp, 29, line++, "%d", cpu_info->ci_stepping);
 
     hv_console_set_xy(current_display, 10, line);
     hv_disp_puts(cdisp, "Brand name:");
     hv_console_set_xy(current_display, 30, line++);
-    hv_disp_puts(cdisp, cpu_info.ci_branding);
+    hv_disp_puts(cdisp, cpu_info->ci_branding);
 
     hv_console_set_xy(current_display, 10, line);
     hv_disp_puts(cdisp, "Vendor string:");
     hv_console_set_xy(current_display, 30, line++);
-    hv_disp_puts(cdisp, cpu_info.ci_vendor);
+    hv_disp_puts(cdisp, cpu_info->ci_vendor);
 
     hv_console_set_xy(current_display, 10, line++);
     hv_disp_puts(cdisp, "CPU features:");
@@ -297,7 +303,7 @@ static int dc_cpu_info_show(struct DebugScreen *scr)
     cpu_info_show_feature(&line, CPU_FEATURE_PAE, "Physical address extension");
     cpu_info_show_feature(&line, CPU_FEATURE_VMX, "Hardware-assisted virtualization");
 
-    if (cpu_info.ci_features & CPU_FEATURE_HVISOR) {
+    if (cpu_info->ci_features & CPU_FEATURE_HVISOR) {
         hv_console_set_xy(current_display, 10, ++line);
         hv_disp_puts(cdisp, "Seems to be running under virtualization :-(");
     }
@@ -314,7 +320,9 @@ static int ind_mmap_page = 0;
 static int nr_mmap_pages = 0;
 static void dc_mem_show_scrolling(void)
 {
-    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+    struct PhysicalMMapping *sys_mmap = sys_info->s_phy_maps;
+    struct CharacterDisplay *cdisp    = sys_info->s_display;
+    struct ConsoleDisplay *current_display = (struct ConsoleDisplay *)cdisp;
     hv_console_set_xy(current_display, 10, 20);
     hv_printf(cdisp, "Got %d memory regions, %d shown on page (%d/%d)"
         , sys_mmap->sm_nr_maps, CONFIG_NR_MMAP_MAX_ENTRIES, ind_mmap_page+1, nr_mmap_pages);
@@ -327,7 +335,8 @@ static bool is_mmap_needs_scrolling = false;
 static void mem_info_dump(struct DebugScreen *scr, struct PhysicalMMapping *phymm, int row)
 {
     int i;
-    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+    struct CharacterDisplay *cdisp    = sys_info->s_display;
+    struct ConsoleDisplay *current_display = (struct ConsoleDisplay *)cdisp;
     int nr_skip = ind_mmap_page*CONFIG_NR_MMAP_MAX_ENTRIES;
     struct MemoryMap *mmap = phymm->sm_maps+nr_skip;
     uint64_t size;
@@ -348,8 +357,12 @@ static void mem_info_dump(struct DebugScreen *scr, struct PhysicalMMapping *phym
 
 static int dc_mem_info_show(struct DebugScreen *scr)
 {
-    struct CharacterDisplay *cdisp = (struct CharacterDisplay *)current_display;
+    struct PhysicalMMapping *sys_mmap = sys_info->s_phy_maps;
+    struct MultiBootInfo *boot_info   = sys_info->s_boot_info;
+    struct CharacterDisplay *cdisp    = sys_info->s_display;
+    struct ConsoleDisplay *current_display = (struct ConsoleDisplay *)cdisp;
     size_t sz_mem = 0;
+
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT);
     hv_console_set_xy(current_display, 10, 5);
     /* Set the maximum available screen lines for the entries */
@@ -395,6 +408,8 @@ static int dc_mem_handle_key(struct DebugScreen *scr, char key)
 
 static int dc_disk_info_show(struct DebugScreen *scr) 
 { 
+    struct ConsoleDisplay *current_display = (struct ConsoleDisplay *)sys_info->s_display;
+
     hv_console_set_xy(current_display, 26, 11);
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT);
     hv_disp_puts((struct CharacterDisplay *)current_display, "< Implementation required >");
