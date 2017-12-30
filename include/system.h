@@ -134,8 +134,30 @@ uint32_t read_cr3(void)
 static inline
 void write_cr3(uint32_t value)
 {
-    __asm__ __volatile("movl %0, %%cr3" : /* No output */
+    __asm__ __volatile__("movl %0, %%cr3" : /* No output */
                                         : "r"(value));
+}
+
+static inline
+uint32_t read_cr4(void)
+{
+    uint32_t value;
+    __asm__ __volatile__("movl %%cr4, %0" : "=r"(value));
+    return value;
+}
+
+static inline
+void write_cr4(uint32_t value)
+{
+    __asm__ __volatile__("movl %0, %%cr4" : /* No output */
+                                        : "r"(value));
+}
+
+/* Invalidate the Translation Lookaside Buffer in uniprocessor mode */
+static inline
+void tlb_flush_single(unsigned long addr)
+{
+    __asm__ __volatile__("invlpg (%0)" ::"r" (addr) : "memory");
 }
 
 static inline
