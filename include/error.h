@@ -20,6 +20,7 @@ enum HV_ERROR {
     HV_ENOMEM,      // Cannot allocate enough memory
     HV_ENOVALID,    // The data used is not valid
     HV_EMISALIGN,   // Pointer/address is misaligned
+    HV_ENOINFO,     // System information structure (struct SystemInfo) is missing
     HV_ETOOLONG     // Coordinates are out of scope
 };
 
