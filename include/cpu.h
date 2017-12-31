@@ -139,21 +139,21 @@ enum CR4_FLAGS {
     CR4_PCE        = (1ULL << 8),  /* Performance monitoring enable */
     CR4_OSFXSR     = (1ULL << 9),  /* Support for FXSAVE, FXSTOR instructions */
     CR4_OSXMMEXCPT = (1ULL << 10), /* Support for unmasked floating point SIMD instructions */
-    CR4_UMIP       = (1ULL << 11),  /* Virtual machine hardware assist enable */
+    CR4_UMIP       = (1ULL << 11), /* Virtual machine hardware assist enable */
     // Reserved
-    CR4_VMXE       = (1ULL << 13),  /* Virtual machine hardware assist enable */
-    CR4_SMXE       = (1ULL << 14),  /* Safe mode extensions */
+    CR4_VMXE       = (1ULL << 13), /* Virtual machine hardware assist enable */
+    CR4_SMXE       = (1ULL << 14), /* Safe mode extensions */
     // Reserved (15..17)
-    CR4_PCIDE      = (1ULL << 17),  /* PCID enable */
-    CR4_OSXSAVE    = (1ULL << 18),  /* XSAVE and processor extend state enable */
+    CR4_PCIDE      = (1ULL << 17), /* PCID enable */
+    CR4_OSXSAVE    = (1ULL << 18), /* XSAVE and processor extend state enable */
     // Reserved
-    CR4_SMEP       = (1ULL << 20),  /* Supervisor Mode Executions Procetion enable */
-    CR4_SMAP       = (1ULL << 21),  /* Supervisor Mode Access Protection enable */
+    CR4_SMEP       = (1ULL << 20), /* Supervisor Mode Executions Procetion enable */
+    CR4_SMAP       = (1ULL << 21), /* Supervisor Mode Access Protection enable */
     // Reserved (22..63)
 };
 
 /* Extended Feature Enable Register (MSR), only for Intel now  */
-#define MSR_EFER 0xC0000080;
+#define MSR_IA32_EFER 0xC0000080
 
 enum MSR_IA32_EFER_FLAGS {
     EFER_SCE       = (1ULL << 0),  /* System call extensions enable */
@@ -179,7 +179,10 @@ struct CpuInfo
     uint64_t ci_features;
 };
 
+struct SystemInfo;
+
 struct CpuInfo *cpu_get_info(void);
-int cpu_set_info(struct CpuInfo *info);
+int             cpu_set_info(struct CpuInfo *info);
+int             cpu_init_long_mode(struct SystemInfo *info);
 
 #endif // CPU_H
