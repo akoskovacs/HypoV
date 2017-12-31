@@ -379,13 +379,13 @@ hypov: $(hypov-all)
 	$(Q)$(CHECK_MBOOT) $@.bin && echo "OK]" || echo "FAIL]"
 
 qemu: hypov
-	$(Q)$(QEMU32) -kernel $(BINARY_TARGET)
+	$(Q)$(QEMU64) -kernel $(BINARY_TARGET)
 
 qemufs: hypov
-	$(Q)$(QEMU32) -hda testfs.img
+	$(Q)$(QEMU64) -hda testfs.img
 
 qemuiso: hypov.iso
-	$(Q)$(QEMU32) -cdrom $^
+	$(Q)$(QEMU64) -cdrom $^
 
 bochs: hypov
 	$(Q)$(BOCHS)
