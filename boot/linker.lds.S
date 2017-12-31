@@ -55,6 +55,19 @@ SECTIONS
         *(.data)
     }
 
+    /* These debug sections could later be stripped */
+    .debug_abbrev   : { *(.debug_abbrev) }
+    .debug_aranges  : { *(.debug_aranges) }
+    .debug_frame    : { *(.debug_frame) }
+    .debug_info     : { *(.debug_info) }
+    .debug_line     : { *(.debug_line) }
+    .debug_loc      : { *(.debug_loc) }
+    .debug_macinfo  : { *(.debug_macinfo) }
+    .debug_pubnames : { *(.debug_pubnames) }
+    .debug_pubtypes : { *(.debug_pubtypes) }
+    .debug_ranges   : { *(.debug_ranges) }
+    .debug_str      : { *(.debug_str) }
+
     .bss : ALIGN(4K)
     {
         *(.COMMON)
