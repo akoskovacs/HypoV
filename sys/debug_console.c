@@ -239,6 +239,8 @@ static int dc_vmm_info_show(struct DebugScreen *scr)
     hv_disp_puts(cdisp, "[R] - Press R to restart the computer");
     hv_console_set_xy(current_display, 10, 21);
     hv_disp_puts(cdisp, "[C] - Press C to resume loading from the first hard disk");
+    hv_console_set_xy(current_display, 10, 22);
+    hv_disp_puts(cdisp, "[L] - Load the Hypervisor");
     return 0;    
 }
 
@@ -250,6 +252,13 @@ static int dc_vmm_handle_key(struct DebugScreen *scr, char key)
     } else if (key == KEY_C) {
         dc_bottom_show_message(scr, "Resume loading from the disk...");
         sys_chainload(); 
+    } else if (key == KEY_L) {
+        dc_bottom_show_message(scr, "Loading...");
+        if (cpu_init_long_mode(sys_info) == 0) {
+            dc_bottom_show_message(scr, "64bit mode activated...");
+        } else {
+            dc_bottom_show_message(scr, "Failed to enter 64bit mode... :(");
+        }
     }
     return 0;
 }
