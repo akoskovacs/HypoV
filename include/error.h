@@ -14,13 +14,15 @@
 #define HV_ERROR_H
 
 enum HV_ERROR {
-    HV_ENODISP = 1, // No display, or NULL
+    HV_GENERIC = 1, // Generic error (specific to that function)
+    HV_ENODISP,     // No display, or NULL
     HV_ENOIMPL,     // Function not implemented
     HV_BADARG,      // Bad argument for the function
     HV_ENOMEM,      // Cannot allocate enough memory
     HV_ENOVALID,    // The data used is not valid
     HV_EMISALIGN,   // Pointer/address is misaligned
     HV_ENOINFO,     // System information structure (struct SystemInfo) is missing
+    HV_ENOSUPP,     // Not suppoted operation (ex.: no such cpu feature)
     HV_ETOOLONG     // Coordinates are out of scope
 };
 
