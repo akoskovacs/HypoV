@@ -156,7 +156,7 @@ static npa_t mm_init_pml3(void)
 
     /* Starting from physical address 0x0 */
     npa_t pa = 0x0;
-    for (int i = 1; i < PAGE_TBL_NR_ENTRIES; i++) {
+    for (int i = 0; i < PAGE_TBL_NR_ENTRIES; i++) {
         npa_t pml2_pa = mm_init_pml2(ptep, pa);
         pml3[i]       = PML_PRESENT | PML_RW | PML_SUPER | pml2_pa;
         pa           += (PAGE_SIZE_2MB * PAGE_TBL_NR_ENTRIES);
