@@ -52,13 +52,13 @@ struct Elf64_Image *elf64_load(void *image_begin, pa_t i_target, int *error)
         return NULL;
     }
 
-    im = hv_expand_heap(sizeof(*im));
+    im = mm_expand_heap(sizeof(*im));
     if (im == NULL) {
         *error = -HV_ENOMEM;
         return NULL;
     }
 
-    header = hv_expand_heap(sizeof(*header));
+    header = mm_expand_heap(sizeof(*header));
     im->i_header = header;
     //im->i_entry  = (void(*)(void))header->e_entry;
 
