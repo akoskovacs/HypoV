@@ -50,6 +50,7 @@ enum KEYBOARD_KEY {
     KEY_E           = 0x12,
     KEY_R           = 0x13,
     KEY_C           = 0x2E,
+    KEY_L           = 0x26,
     KEY_SPACE       = 0x39
     /* TODO */
 };
