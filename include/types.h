@@ -8,9 +8,9 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-/* Only valid for 64 bit GCCs */
 #ifdef __HVISOR__
 
+#if defined(__i386__)
 typedef unsigned long size_t;
 typedef unsigned long long off_t;
 
@@ -23,6 +23,20 @@ typedef signed char int8_t;
 typedef signed short int int16_t;
 typedef signed int int32_t;
 typedef signed long long int64_t;
+#elif defined(__x86_64__)
+typedef unsigned long size_t;
+typedef unsigned long long off_t;
+
+typedef unsigned char uint8_t;
+typedef unsigned short int uint16_t;
+typedef unsigned int uint32_t;
+typedef unsigned long uint64_t;
+
+typedef signed char int8_t;
+typedef signed short int int16_t;
+typedef signed int int32_t;
+typedef signed long int64_t;
+#endif // __i386__
 
 #ifndef __cplusplus
 typedef enum { false, true } bool;
