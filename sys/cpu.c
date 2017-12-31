@@ -62,6 +62,8 @@ int cpu_set_info(struct CpuInfo *info)
     return 0;
 }
 
+void __cpu_enter_long_mode(void);
+
 /*
  * Going 64bit, baby...
 */
@@ -78,10 +80,13 @@ int cpu_init_long_mode(struct SystemInfo *info)
         return error;
     }
 
-    /* Enable paging */
+#if 0
     uint32_t cr0 = cr0_read() | CR0_PG;
     bochs_breakpoint();
     cr0_write(cr0);
+#endif
+
+    __cpu_enter_long_mode();
 
     /* Check if 64bit mode is activated */
     if (!(msr_read(MSR_IA32_EFER) & EFER_LMA)) {

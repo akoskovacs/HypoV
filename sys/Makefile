@@ -5,4 +5,5 @@ obj-y += debug_console.o
 obj-y += system.o
 obj-y += memory.o
 obj-y += cpu.o
+obj-y += cpu_ll.o
 obj-y += loader.o
