@@ -8,6 +8,8 @@
 #ifndef HYPERVISOR_H
 #define HYPERVISOR_H
 
+#include <types.h>
+
 struct MultiBootInfo;
 struct CharacterDisplay;
 struct CpuInfo;
@@ -20,6 +22,7 @@ struct SystemInfo {
     struct CpuInfo          *s_cpu_info;
     struct PhysicalMMapping *s_phy_maps;
     struct Elf64_Image      *s_core_image;
+    pml4_t                  *s_pml4;
 };
 
 void hv_entry(struct MultiBootInfo *);
