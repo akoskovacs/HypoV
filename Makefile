@@ -9,7 +9,7 @@ MAKEFLAGS += -rR --no-print-directory
 
 SHARED_FLAGS := -m32 -std=c99 -nostdinc -fno-builtin -fno-stack-protector -fno-unwind-tables
 SHARED_FLAGS += -fno-asynchronous-unwind-tables -ffreestanding -Wl,-melf_i386 -march=i586
-SHARED_FLAGS += -nostartfiles -nodefaultlibs -nostdlib -static -mno-80387 -mno-fp-ret-in-387
+SHARED_FLAGS += -nostartfiles -nodefaultlibs -nostdlib -static -mno-80387 -mno-fp-ret-in-387 -ggdb
 
 BINARY_TARGET := hypov.bin
 TESTFS 		  := testfs.img
@@ -371,7 +371,7 @@ hypov-all	:= $(hypov-objs) $(hypov-libs)
 quiet_cmd_hypov = LD      $@
       cmd_hypov = $(CC) $(LDFLAGS) -o $(BINARY_TARGET) \
       -Wl,--start-group $(hypov-libs) $(hypov-objs) -Wl,--end-group \
-	  -Wl,-T boot/linker.lds $(SHARED_FLAGS) -Wl,-Map $(MAPFILE)
+	  -Wl,-T boot/linker.lds $(SHARED_FLAGS) -Wl,-Map $(MAPFILE) -ggdb
 
 hypov: $(hypov-all)
 	$(call if_changed,hypov)
@@ -386,6 +386,9 @@ qemufs: hypov
 
 qemuiso: hypov.iso
 	$(Q)$(QEMU64) -cdrom $^
+
+qemudbg: hypov
+	$(Q)$(QEMU64) -kernel $(BINARY_TARGET) -S -s
 
 bochs: hypov
 	$(Q)$(BOCHS)
