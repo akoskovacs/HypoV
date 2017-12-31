@@ -27,7 +27,7 @@
 
 struct CpuInfo *cpu_get_info(void)
 {
-    struct CpuInfo *info = (struct CpuInfo *)hv_expand_heap(sizeof(*info));
+    struct CpuInfo *info = (struct CpuInfo *)mm_expand_heap(sizeof(*info));
     if (info) {
         cpu_set_info(info);
     }
@@ -42,8 +42,8 @@ int cpu_set_info(struct CpuInfo *info)
         return -HV_BADARG;
     }
 
-    info->ci_vendor   = (char *)hv_expand_heap(CPU_VENDOR_SIZE + 1);
-    branding          = (char *)hv_expand_heap(CPU_BRANDING_SIZE + 1);
+    info->ci_vendor   = (char *)mm_expand_heap(CPU_VENDOR_SIZE + 1);
+    branding          = (char *)mm_expand_heap(CPU_BRANDING_SIZE + 1);
 
     cpuid_get_branding(branding);
     cpuid_get_vendor(info->ci_vendor);
@@ -59,5 +59,35 @@ int cpu_set_info(struct CpuInfo *info)
     info->ci_model    = GET_MODEL(regs[CPUID_REG_EAX]);
     info->ci_features = regs[CPUID_REG_EDX] | (((uint64_t)regs[CPUID_REG_ECX]) << 32);
 
+    return 0;
+}
+
+/*
+ * Going 64bit, baby...
+*/
+int cpu_init_long_mode(struct SystemInfo *info)
+{
+    int error = 0;
+    /* Enable long-mode. 64bit will not be active, until paging is not set up. */
+    uint32_t efer = msr_read(MSR_IA32_EFER) | EFER_LME;
+    msr_write(MSR_IA32_EFER, efer);
+
+    /* Setup all the paging levels needed for now */
+    error = mm_init_paging(info);
+    if (error != 0) {
+        return error;
+    }
+
+    /* Enable paging */
+    uint32_t cr0 = cr0_read() | CR0_PG;
+    bochs_breakpoint();
+    cr0_write(cr0);
+
+    /* Check if 64bit mode is activated */
+    if (!(msr_read(MSR_IA32_EFER) & EFER_LMA)) {
+        return -HV_GENERIC;
+    }
+
+    /* Success, everything is much better in 64bit */
     return 0;
 }
