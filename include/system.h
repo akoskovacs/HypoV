@@ -93,7 +93,7 @@ void rdtsc(uint32_t *upper, uint32_t *lower)
 }
 
 static inline
-uint32_t read_cr0(void)
+uint32_t cr0_read(void)
 {
     uint32_t value;
     __asm__ __volatile__("movl %%cr0, %0" : "=r"(value));
@@ -101,14 +101,14 @@ uint32_t read_cr0(void)
 }
 
 static inline
-void write_cr0(uint32_t value)
+void cr0_write(uint32_t value)
 {
     __asm__ __volatile("movl %0, %%cr0" : /* No output */
                                         : "r"(value));
 }
 
 static inline
-uint32_t read_cr1(void)
+uint32_t cr1_read(void)
 {
     uint32_t value;
     __asm__ __volatile__("movl %%cr1, %0" : "=r"(value));
@@ -116,7 +116,7 @@ uint32_t read_cr1(void)
 }
 
 static inline
-uint32_t read_cr2(void)
+uint32_t cr2_read(void)
 {
     uint32_t value;
     __asm__ __volatile__("movl %%cr2, %0" : "=r"(value));
@@ -124,7 +124,7 @@ uint32_t read_cr2(void)
 }
 
 static inline
-uint32_t read_cr3(void)
+uint32_t cr3_read(void)
 {
     uint32_t value;
     __asm__ __volatile__("movl %%cr3, %0" : "=r"(value));
@@ -132,14 +132,14 @@ uint32_t read_cr3(void)
 }
 
 static inline
-void write_cr3(uint32_t value)
+void cr3_write(uint32_t value)
 {
     __asm__ __volatile__("movl %0, %%cr3" : /* No output */
                                         : "r"(value));
 }
 
 static inline
-uint32_t read_cr4(void)
+uint32_t cr4_read(void)
 {
     uint32_t value;
     __asm__ __volatile__("movl %%cr4, %0" : "=r"(value));
@@ -147,15 +147,34 @@ uint32_t read_cr4(void)
 }
 
 static inline
-void write_cr4(uint32_t value)
+void cr4_write(uint32_t value)
 {
     __asm__ __volatile__("movl %0, %%cr4" : /* No output */
                                         : "r"(value));
 }
 
+static inline
+uint64_t msr_read(uint32_t msr)
+{
+    uint32_t high;
+    uint32_t low;
+    __asm__ __volatile__("rdmsr" : "=d"(high), "=a"(low)
+                                 : "c"(msr));
+    return ((uint64_t)high << 32) | low;
+}
+
+static inline
+void msr_write(uint32_t msr, uint64_t value)
+{
+    uint32_t high = value >> 32;
+    uint32_t low = value & 0xFFFFFFFF;
+    __asm__ __volatile__("wrmsr" : /* No output */
+                                 : "c"(msr), "d"(high), "a"(low));
+}
+
 /* Invalidate the Translation Lookaside Buffer in uniprocessor mode */
 static inline
-void tlb_flush_single(unsigned long addr)
+void tlb_flush(unsigned long addr)
 {
     __asm__ __volatile__("invlpg (%0)" ::"r" (addr) : "memory");
 }
