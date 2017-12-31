@@ -29,17 +29,23 @@ typedef enum { false, true } bool;
 #endif // __cplusplus
 
 /* Hypervisor (host) physical addres */
-typedef long hpa_t;
-typedef hpa_t pa_t;
+typedef uint64_t hpa_t;
+typedef hpa_t    pa_t;
+typedef unsigned long npa_t; /* Native physical address */
+
 /* Hypervisor (host) virtual addres */
 typedef uint64_t hva_t;
-typedef hva_t va_t;
+typedef hva_t    va_t;
+typedef unsigned long nva_t; /* Native virtual address */
 
-/* Guest OS physical addres */
-typedef uint64_t gpa_t;
-/* Guest OS physical addres */
-typedef uint64_t gva_t;
+typedef uint64_t gpa_t;  /* Guest OS physical addres */
+typedef uint64_t gva_t;  /* Guest OS physical addres */
 
-#endif
+typedef uint64_t pml4_t; /* Page Map Level 4             */
+typedef uint64_t pml3_t; /* Page Directory Pointer Table */
+typedef uint64_t pml2_t; /* Page Directory Table         */
+typedef uint64_t pml1_t; /* Unused for 2MB paging        */
+
+#endif // __HVISOR__
 
 #endif // TYPES_H
