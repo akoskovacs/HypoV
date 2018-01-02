@@ -35,10 +35,11 @@ bool elf64_is_header_valid(struct Elf64_Hdr *header)
         && (header->e_ident[EI_DATA]  == ELFDATA2LSB)
         && (header->e_version  == EV_CURRENT)
         && (header->e_type     == ET_DYN)
-        && (header->e_machine  == ELF_OSABI);
+        && (header->e_machine  == ELF_OSABI)
+        && (header->e_entry    != 0x0);
 }
 
-struct Elf64_Image *elf64_load(void *image_begin, pa_t i_target, int *error)
+struct Elf64_Image *elf64_load(void *image_begin, npa_t i_target, int *error)
 {
     struct Elf64_Image *im = NULL;
     struct Elf64_Hdr *header = NULL;
@@ -57,9 +58,10 @@ struct Elf64_Image *elf64_load(void *image_begin, pa_t i_target, int *error)
         *error = -HV_ENOMEM;
         return NULL;
     }
-
-    header = mm_expand_heap(sizeof(*header));
     im->i_header = header;
+
+    struct Elf64_Shdr *sections = mm_expand_heap(sizeof(*sections) * header->e_shnum);
+
     //im->i_entry  = (void(*)(void))header->e_entry;
 
     return im;
