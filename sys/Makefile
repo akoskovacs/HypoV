@@ -1,3 +1,7 @@
+subdir-ccflags-y := -m32 -march=i586
+#subdir-ldflags-y := -Wl$(comma)-melf_i386 
+LDFLAGS := -melf_i386 
+
 obj-y += drivers/
 obj-y += init.o
 obj-y += char_display.o
