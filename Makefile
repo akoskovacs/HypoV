@@ -385,7 +385,7 @@ quiet_cmd_hvcore = LD      $@
 # Embed the ELF64 in a regular ELF32 object file
 quiet_cmd_hvobj  = OBJCOPY $@
   	  cmd_hvobj  = $(OBJCOPY) --input binary --output elf32-i386 \
-	  --rename-section .data=.hvcore_payload,alloc,load,data,readonly \
+	  --rename-section .data=.hvcore_payload,alloc,load,readonly,data,contents \
 	  --redefine-sym _binary_sys_core_hvcore_elf64_end=__hvcore_end \
 	  --redefine-sym _binary_sys_core_hvcore_elf64_start=__hvcore_start \
 	  --redefine-sym _binary_sys_core_hvcore_elf64_size=__hvcore_size \
