@@ -71,7 +71,7 @@ int cpu_init_long_mode(struct SystemInfo *info)
 {
     int error = 0;
     /* Enable long-mode. 64bit will not be active, until paging is not set up. */
-    uint32_t efer = msr_read(MSR_IA32_EFER) | EFER_LME;
+    uint64_t efer = msr_read(MSR_IA32_EFER) | EFER_LME;
     msr_write(MSR_IA32_EFER, efer);
 
     /* Setup all the paging levels needed for now */
