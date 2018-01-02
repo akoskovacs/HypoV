@@ -55,6 +55,28 @@ SECTIONS
         *(.data)
     }
 
+    /*
+     * The core hypervisor ELF64 image. The linker can't embed
+     * binary data here :(. Because of this, the section is
+     * commented-out, standing only to be informative about the
+     * final ELF32 binary output layout.
+     *
+     * The build system will later add the real section to the 
+     * executable with 'objcopy'.
+     * Before activating 64bit mode, this will be loaded into
+     * the main memory dynamically. 
+
+     * .hvcore_payload :
+     * {
+     *  __hvcore_start = .;
+     *  ./sys/core/hvcore.elf64;
+     *  __hvcore_end = .;
+     *  __hvcore_size = __hvcore_end - __hvcore_start;
+     *
+     *   KEEP(*(.core_payload));
+     * }
+    /*
+
     /* These debug sections could later be stripped */
     .debug_abbrev   : { *(.debug_abbrev) }
     .debug_aranges  : { *(.debug_aranges) }
