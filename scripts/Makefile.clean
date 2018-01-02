@@ -20,6 +20,7 @@ include $(if $(wildcard $(kbuild-dir)/Kbuild), $(kbuild-dir)/Kbuild, $(kbuild-di
 # ==========================================================================
 
 __subdir-y	:= $(patsubst %/,%,$(filter %/, $(obj-y)))
+__subdir-y	+= $(patsubst %/,%,$(filter %/, $(hvobj-y)))
 subdir-y	+= $(__subdir-y)
 __subdir-m	:= $(patsubst %/,%,$(filter %/, $(obj-m)))
 subdir-m	+= $(__subdir-m)

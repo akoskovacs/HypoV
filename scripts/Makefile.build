@@ -11,6 +11,8 @@ __build:
 # 1) they have correct type
 # 2) they do not inherit any value from the environment
 obj-y :=
+hvobj-y := 
+hvcore-y := 
 lib-y :=
 always :=
 targets :=
@@ -126,16 +128,16 @@ ifneq ($(strip $(obj-y) $(obj-)),)
 builtin-target := $(obj)/built-in.o
 endif
 
-__build: $(builtin-target) $(lib-target) $(extra-y) $(subdir-ym) $(always)
+ifneq ($(strip $(hvobj-y) $(hvobj-)),)
+hvcore-target := $(obj)/built-in.o
+endif
+
+__build: $(builtin-target) $(lib-target) $(extra-y) $(subdir-ym) $(always) $(hvcore-target)
 	@:
 
 # Compile C sources (.c)
 # ---------------------------------------------------------------------------
 
-
-SHARED_FLAGS := -m32 -std=c99 -nostdinc -fno-builtin -fno-stack-protector -fno-unwind-tables
-SHARED_FLAGS += -fno-asynchronous-unwind-tables -ffreestanding -Wl,-melf_i386 -march=i586
-SHARED_FLAGS += -nostartfiles -nodefaultlibs -nostdlib -static -ggdb
 KBUILD_CFLAGS_KERNEL += $(SHARED_FLAGS)
 
 # Default is built-in, unless we know otherwise
@@ -208,7 +210,7 @@ $(obj)/%.o: $(src)/%.asm FORCE
 
 # End of NASM rules
 
-targets += $(real-objs-y) $(lib-y)
+targets += $(real-objs-y) $(lib-y) $(real-hvobjs-y)
 targets += $(extra-y) $(MAKECMDGOALS) $(always)
 
 # Linker scripts preprocessor (.lds.S -> .lds)
@@ -242,6 +244,20 @@ $(builtin-target): $(obj-y) FORCE
 
 targets += $(builtin-target)
 endif # builtin-target
+#
+# Rule to compile a set of .o files into one .o file for 64bit Hypervisor code
+#
+ifdef hvcore-target
+quiet_cmd_link_h_target = LD      $@
+cmd_link_h_target = $(if $(strip $(hvobj-y)),\
+		      $(LD) $(ld_flags) -r -o $@ $(filter $(hvobj-y), $^), \
+		      rm -f $@; $(AR) rcs$(KBUILD_ARFLAGS) $@)
+
+$(hvcore-target): $(hvobj-y) FORCE
+	$(call if_changed,link_h_target)
+
+targets += $(hvcore-target)
+endif # hvcore-target
 
 #
 # Rule to compile a set of .o files into one .a file
