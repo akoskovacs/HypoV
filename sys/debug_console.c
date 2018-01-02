@@ -29,7 +29,7 @@ enum DC_KEYS {
 };
 
 /* TODO: Delete this delay loop */
-#define KBD_DELAY() for (int i = 1; i < 5e7; i++)
+#define KBD_DELAY() for (unsigned long i = 1; i < 5000000UL; i++)
 
 #define DECL_HANDLER_PROTOTYPES(scrname)                             \
     static int dc_##scrname##_info_show(struct DebugScreen *);       \
