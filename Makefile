@@ -1,14 +1,15 @@
 # High-level kbuild Makefile imported from Linux
 # modified for HypoV. Under GPL 2 LICENSE.
-# 
+#
 # Do not:
 # o  use make's built-in rules and variables
 #    (this increases performance and avoids hard-to-debug behaviour);
 # o  print "Entering directory ...";
 MAKEFLAGS += -rR --no-print-directory
 
-SHARED_FLAGS := -m32 -std=c99 -nostdinc -fno-builtin -fno-stack-protector -fno-unwind-tables
-SHARED_FLAGS += -fno-asynchronous-unwind-tables -ffreestanding -Wl,-melf_i386 -march=i586
+# Shared C flags across 32bit and 64bit 
+SHARED_FLAGS := -std=c99 -nostdinc -fno-builtin -fno-stack-protector -fno-unwind-tables
+SHARED_FLAGS += -fno-asynchronous-unwind-tables -ffreestanding -mno-sse4
 SHARED_FLAGS += -nostartfiles -nodefaultlibs -nostdlib -static -mno-80387 -mno-fp-ret-in-387 -ggdb
 
 BINARY_TARGET := hypov.bin
@@ -178,7 +179,7 @@ NM		= $(CROSS_COMPILE)nm
 STRIP		= $(CROSS_COMPILE)strip
 OBJCOPY		= $(CROSS_COMPILE)objcopy
 OBJDUMP		= $(CROSS_COMPILE)objdump
-AWK		= awk
+AWK			= awk
 INSTALLHVISOR  := installkernel
 PERL		= perl
 QEMU32	= qemu-system-i386
@@ -353,27 +354,46 @@ loader: stage0/stage0
 # The all: target is the default when no target is given on the
 # command line.
 
-# CFLAGS += -m32
-#LDFLAGS += -T boot/linker.ld
-#LDFLAGS += -melf32_x86_64
-# LDFLAGS += -melf_i386
-
-
 all: hypov loader
-objs-y		:= sys boot
+# 32bit parts
+objs-y		:= sys boot 
 libs-y		:= lib
+# 64bit part (core hypervisor functionality)
+hvobjs-y    := sys/core
 
-hypov-dirs	:= $(objs-y) $(libs-y)
+hypov-dirs	:= $(objs-y) $(libs-y) $(hvobjs-y)
 hypov-objs	:= $(patsubst %,%/built-in.o, $(objs-y))
+hvcore-objs	:= $(patsubst %,%/built-in.o, $(hvobjs-y))
 hypov-libs	:= $(patsubst %,%/lib.a, $(libs-y))
-hypov-all	:= $(hypov-objs) $(hypov-libs)
+hypov-all	:= $(hypov-objs) $(hypov-libs) $(hvcore-objs)
 
+HVCORE_DIR    := sys/core
+HVCORE_TARGET := hvcore.elf64
+HVCORE_OBJ	  := $(HVCORE_DIR)/$(HVCORE_TARGET).o # 32bit binary container
+
+# Link the main ELF32 with the loader, debug console, and ELF64 container
 quiet_cmd_hypov = LD      $@
       cmd_hypov = $(CC) $(LDFLAGS) -o $(BINARY_TARGET) \
-      -Wl,--start-group $(hypov-libs) $(hypov-objs) -Wl,--end-group \
+      -Wl,--start-group $(hypov-libs) $(hypov-objs) $(HVCORE_OBJ) -Wl,--end-group \
 	  -Wl,-T boot/linker.lds $(SHARED_FLAGS) -Wl,-Map $(MAPFILE) -ggdb
 
+# Link the core ELF64
+quiet_cmd_hvcore = LD      $@
+      cmd_hvcore = $(CC)  -Wl,-ehv_entry_64 $(LDFLAGS) -o $(HVCORE_DIR)/$(HVCORE_TARGET) \
+      -Wl,--start-group $(hvcore-objs) $(SHARED_FLAGS) -Wl,--end-group -ggdb
+	 
+# Embed the ELF64 in a regular ELF32 object file
+quiet_cmd_hvobj  = OBJCOPY $@
+  	  cmd_hvobj  = $(OBJCOPY) --input binary --output elf32-i386 \
+	  --rename-section .data=.hvcore_payload,alloc,load,data,readonly \
+	  --redefine-sym _binary_sys_core_hvcore_elf64_end=__hvcore_end \
+	  --redefine-sym _binary_sys_core_hvcore_elf64_start=__hvcore_start \
+	  --redefine-sym _binary_sys_core_hvcore_elf64_size=__hvcore_size \
+	  --binary-architecture i386 $(HVCORE_DIR)/$(HVCORE_TARGET) $(HVCORE_OBJ)
+
 hypov: $(hypov-all)
+	$(call if_changed,hvcore)
+	$(call if_changed,hvobj)
 	$(call if_changed,hypov)
 	@echo -n "  [Multiboot "
 	$(Q)$(CHECK_MBOOT) $@.bin && echo "OK]" || echo "FAIL]"
