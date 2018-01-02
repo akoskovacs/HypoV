@@ -12,7 +12,7 @@ align 4
 section .text
 bits 32
 __cpu_enter_long_mode:
-    xchg bx, bx
+;   xchg bx, bx         ; Bochs breakpoint, if needed
     mov eax, cr0        ; Read CR0
     bts eax, CR0_PG_BIT ; Set PG bit
     mov cr0, eax
