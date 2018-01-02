@@ -16,6 +16,11 @@
 #include <memory.h>
 #include <loader.h>
 
+/* Pointers to the embedded ELF64 core image */
+extern unsigned long __hvcore_start;
+extern unsigned long __hvcore_end;
+extern unsigned long __hvcore_size;
+
 static struct SystemInfo system_info;
 
 void __noreturn hv_entry(struct MultiBootInfo *mbi)
