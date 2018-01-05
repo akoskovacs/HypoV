@@ -17,7 +17,7 @@ struct Elf64_Image
     struct Elf64_Shdr **i_sections;      /* NULL terminated */
     size_t              i_nr_sections;
     char              **i_strtab;        /* NULL terminated */
-    size_t              i_nr_str;
+    size_t              i_nr_strtab;
 
     void (*i_entry)(void);
 };
