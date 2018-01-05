@@ -6,13 +6,4 @@ menu "Debug Console"
     endmenu
 endmenu
 
-menu "Hypervisor"
-    config NR_HV_PAGES
-        default 16
-        int "Number of 2MB pages allocated for the hypervisor"
-        ---help---
-            The number of physical memory pages allocated for the core hypervisor.
-            In the default configuration with 16 2MB pages, this will give 32MB of
-            usable memory for all core functionality.
-
-endmenu
+source "sys/core/Kconfig"
