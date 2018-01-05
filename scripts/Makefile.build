@@ -22,11 +22,13 @@ EXTRA_CFLAGS   :=
 EXTRA_CPPFLAGS :=
 EXTRA_LDFLAGS  :=
 asflags-y  :=
+nasmflags-y  :=
 ccflags-y  :=
 cppflags-y :=
 ldflags-y  :=
 
 subdir-asflags-y :=
+subdir-nasmflags-y :=
 subdir-ccflags-y :=
 
 # Read auto.conf if it exists, otherwise ignore
