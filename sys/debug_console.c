@@ -360,7 +360,13 @@ static void mem_info_dump(struct DebugScreen *scr, struct PhysicalMMapping *phym
         hv_console_set_xy(current_display, 40, row);
         hv_printf(cdisp, "%d KB", size / 1024);
         hv_console_set_xy(current_display, 55, row++);
-        hv_printf(cdisp, "[%s]", ((mmap->mm_flags & MM_RESERVED) ? "reserved" : "free"));
+        const char *mtext = "free";
+        if (mmap->mm_flags & MM_RESERVED) {
+            mtext = "reserved";
+        } else if (mmap->mm_flags & MM_SELECTED) {
+            mtext = "selected";
+        }
+        hv_printf(cdisp, "[%s]", mtext);
     }
 }
 
