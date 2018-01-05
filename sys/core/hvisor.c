@@ -48,7 +48,7 @@ void scall_linux_exit(long ecode)
             : "a"(SCALL_LINUX_EXIT), "D"(ecode));
 }
 
-void hv_entry_64(void *arg)
+void hv_start(void *arg)
 {
     /* No arguments, we must be executed from an OS, hopefully Linux :D */
     if (arg == 0x0) {

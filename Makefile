@@ -380,7 +380,7 @@ quiet_cmd_hypov = LD      $@
 # Link the core ELF64
 quiet_cmd_hvcore = LD      $@
       cmd_hvcore = $(CC)  -Wl,-ehv_entry_64 $(LDFLAGS) -o $(HVCORE_DIR)/$(HVCORE_TARGET) \
-      -Wl,--start-group $(hvcore-objs) $(SHARED_FLAGS) -Wl,--end-group -ggdb
+	  -Wl,-T $(HVCORE_DIR)/hvcore.lds -Wl,--start-group $(hvcore-objs) $(SHARED_FLAGS) -Wl,--end-group -ggdb
 	 
 # Embed the ELF64 in a regular ELF32 object file
 quiet_cmd_hvobj  = OBJCOPY $@
