@@ -17,6 +17,7 @@
 #define PAGE_SIZE_2MB      0x200000 // 1 << 21
 #define PAGE_SHIFT_2MB     21
 #define PAGE_ALIGN_MASK_4K 0xfffff000
+#define PAGE_SIZE          PAGE_SIZE_2MB
 
 #define PML_PRESENT        (1 << 0)  // Page present
 #define PML_RW             (1 << 1)  // Read/Write
@@ -87,6 +88,8 @@ void                    *mm_expand_heap_4k(size_t sz); // 4K aligned
 struct PhysicalMMapping *mm_init_mapping(struct MultiBootInfo *mbi);
 int                      mm_init_paging(struct SystemInfo *info);
 pml4_t                  *mm_init_page_tables(void);
+
+struct MemoryMap *mm_alloc_phymap(struct PhysicalMMapping *maps, unsigned int nr_pages, int *error);
 
 // pa_t                     mm_virt_to_phys32(va_t);
 // va_t                     mm_phys_to_virt32(pa_t);

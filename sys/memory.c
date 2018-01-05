@@ -135,6 +135,63 @@ struct PhysicalMMapping *mm_init_mapping(struct MultiBootInfo *mbi)
     return phy_map;
 }
 
+/* 
+ * Allocate physical memory map for a given number of 2MB pages
+ * If found the full physical mapping will be modified to accomodate
+ * the newly allocated region. Only avaliable maps are considered.
+*/
+struct MemoryMap *
+mm_alloc_phymap(struct PhysicalMMapping *maps, unsigned int nr_pages, int *error)
+{
+    if (maps == NULL || error == NULL) {
+        *error = -HV_BADARG;
+        return NULL;
+    }
+
+    if (maps->sm_nr_alloc - maps->sm_nr_maps < 1) {
+        *error = -HV_ENOMEM;
+        return NULL;
+    }
+    *error = 0;
+
+    uint64_t need_sz = nr_pages * PAGE_SIZE;
+    struct MemoryMap *fmap = NULL;
+    struct MemoryMap *pmap = maps->sm_maps;
+    struct MemoryMap *ppm  = pmap;
+    struct MemoryMap omap;
+    for (int i = 1; i < maps->sm_nr_maps + 1; i++) {
+        /* If this mapping is available ... */
+        if ((fmap == NULL) && !(ppm->mm_flags & (MM_RESERVED | MM_EMPTY))) {
+            /* ... and has enough space */
+            uint64_t msz = ppm->mm_end - ppm->mm_start;
+            if (msz > need_sz) {
+                /* Save and modify the next slot */
+                omap              = pmap[i];
+                pmap[i].mm_flags  = MM_SELECTED;
+                pmap[i].mm_end    = ppm->mm_end;
+                /* Decrease the current one, by the requested size */
+                ppm->mm_end       -= need_sz;
+                pmap[i].mm_start  = ppm->mm_end;
+                /* This is what we found */
+                fmap              = pmap + i;
+                maps->sm_nr_maps++;
+            } else if (msz == need_sz) {
+                /* No need for anything fancy */
+                ppm->mm_flags  = MM_SELECTED;
+                return ppm;
+            }
+        } else if (fmap != NULL) {
+            /* When already found one, must do the copying */
+            struct MemoryMap oomap = pmap[i];
+            pmap[i] = omap;
+            omap    = oomap;
+        }
+        ppm++;
+    }
+
+    return fmap;
+}
+
 /* Build the last level of identity pages */
 static npa_t mm_init_pml2(pml2_t *pte, npa_t pa)
 {
@@ -184,9 +241,9 @@ npa_t mm_init_pml4(pml4_t *pml4)
 }
 
 /*
- * Map the first entire 1GB physical memory into consencutive
- * 2MB pages starting from 0x0 (identity paging). Identity paging
- * mandatory for switching into 64bit mode.
+ * Map the entire 4GB memory address space (basically the entireity in 32bit mode)
+ * into consencutive 2MB pages starting from 0x0 (identity paging). 
+ * Identity paging is mandatory for switching to 64bit mode.
 */
 pml4_t *mm_init_page_tables(void)
 {
