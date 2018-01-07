@@ -139,11 +139,14 @@ struct PhysicalMMapping *mm_init_mapping(struct MultiBootInfo *mbi)
  * Allocate physical memory map for a given number of 2MB pages
  * If found the full physical mapping will be modified to accomodate
  * the newly allocated region. Only avaliable maps are considered.
+ * XXX: At least two pages has to be requested (4M).
+ * 
+ * It is always ensured,that the new mapping is 2MB aligned.
 */
 struct MemoryMap *
 mm_alloc_phymap(struct PhysicalMMapping *maps, unsigned int nr_pages, int *error)
 {
-    if (maps == NULL || error == NULL) {
+    if (maps == NULL || error == NULL || nr_pages < 2) {
         *error = -HV_BADARG;
         return NULL;
     }
@@ -170,12 +173,24 @@ mm_alloc_phymap(struct PhysicalMMapping *maps, unsigned int nr_pages, int *error
                 pmap[i].mm_flags  = MM_SELECTED;
                 pmap[i].mm_end    = ppm->mm_end;
                 /* Decrease the current one, by the requested size */
-                ppm->mm_end       -= need_sz;
-                pmap[i].mm_start  = ppm->mm_end;
+                ppm->mm_end      -= need_sz;
+                /* Respect page boundaries */
+                uint64_t page_end = ppm->mm_end & PAGE_ALIGN_MASK_4K;
+                /* Already aligned, nothing to do */
+                if (pmap[i].mm_start == page_end) {
+                    pmap[i].mm_start = page_end;
+                } else {
+                    /* Ooops, skip to the next page */
+                    pmap[i].mm_start = page_end + PAGE_SIZE_2M;
+                }
                 /* This is what we found */
                 fmap              = pmap + i;
                 maps->sm_nr_maps++;
             } else if (msz == need_sz) {
+                /* It's only good, if it's already starts at a 2MB address */
+                if ((ppm->mm_start & PAGE_ALIGN_MASK_4K) != ppm->mm_start) {
+                    continue;
+                }
                 /* No need for anything fancy */
                 ppm->mm_flags  = MM_SELECTED;
                 return ppm;
@@ -197,7 +212,7 @@ static npa_t mm_init_pml2(pml2_t *pte, npa_t pa)
 {
     for (int i = 0; i < PAGE_TBL_NR_ENTRIES; i++) {
         pte[i] = PML_PRESENT | PML_RW | PML_SUPER | PML2_PS | pa;
-        pa    += PAGE_SIZE_2MB;
+        pa    += PAGE_SIZE_2M;
     }
     return (npa_t)pte;
 }
@@ -216,7 +231,7 @@ static npa_t mm_init_pml3(void)
     for (int i = 0; i < PAGE_TBL_NR_ENTRIES; i++) {
         npa_t pml2_pa = mm_init_pml2(ptep, pa);
         pml3[i]       = PML_PRESENT | PML_RW | PML_SUPER | pml2_pa;
-        pa           += (PAGE_SIZE_2MB * PAGE_TBL_NR_ENTRIES);
+        pa           += (PAGE_SIZE_2M * PAGE_TBL_NR_ENTRIES);
         /* Get the next PML2 table */
         ptep          = (pml2_t *)((char *)ptep) + (PAGE_TBL_NR_ENTRIES * PAGE_SIZE_4K);
     }

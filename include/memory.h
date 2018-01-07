@@ -14,10 +14,11 @@
 
 #define PAGE_SIZE_4K       0x1000   // 4096
 #define PAGE_SHIFT_4K      12
-#define PAGE_SIZE_2MB      0x200000 // 1 << 21
-#define PAGE_SHIFT_2MB     21
+#define PAGE_SIZE_2M       0x200000 // 1 << 21
+#define PAGE_SHIFT_2M      21
 #define PAGE_ALIGN_MASK_4K 0xfffff000
-#define PAGE_SIZE          PAGE_SIZE_2MB
+#define PAGE_ALIGN_MASK_2M 0xfff00000
+#define PAGE_SIZE          PAGE_SIZE_2M
 
 #define PML_PRESENT        (1 << 0)  // Page present
 #define PML_RW             (1 << 1)  // Read/Write
@@ -32,14 +33,13 @@
 #define PML2_PAT           (1 << 12) // Page Attribute Table
 #define PML_NX             (1 << 63) // No-execute
 
-
 #define PAGE_TBL_NR_ENTRIES 512
 /* Mask for the level index */
 #define VA_PML_MASK         0x1FF    // 9 bits
 
 #define VA_PML4_SHIFT       39
 #define VA_PML3_SHIFT       30
-#define VA_PML2_SHIFTl      21
+#define VA_PML2_SHIFT       21
 #define VA_PAGE_OFFSET_MASK 0x1FFFFF // Last 21 bits
 
 /* Get table indexes from the virtual address */
@@ -49,7 +49,7 @@
 
 /* Mask for the table physical addresses (already aligned) */
 #define PML_BASE_MASK   0xFFFFFFFFFF000ULL // Bits (51..12)
-#define PAGE_MASK_2MB   0xFFFFFFFE00000ULL // Bits (51..21)
+#define PAGE_MASK_2M    0xFFFFFFFE00000ULL // Bits (51..21)
 
 /* XXX: All physical base addresses has to be 4K aligned */
 #define VA_PML3_IDX(va) ((((va_t)va) >> VA_PML3_SHIFT) & VA_PML_MASK)
