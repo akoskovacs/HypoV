@@ -6,6 +6,7 @@
  * | ELF32 image.                                               |
  * +------------------------------------------------------------+
 */
+#include <drivers/video/pc_console.h>
 
 /* 
  * This code is contained in a proper ELF64 binary image. It is built
@@ -48,16 +49,33 @@ void scall_linux_exit(long ecode)
             : "a"(SCALL_LINUX_EXIT), "D"(ecode));
 }
 
+void os_error_stub(void)
+{
+    scall_linux_write(1, hv_exe_warning, sizeof(hv_exe_warning));
+    scall_linux_exit(0xff);
+}
+
 void hv_start(void *arg)
 {
+    char message[] = "Hello, from 64bit land (hvcore.elf64) :D :D :D";
+    char *hello = message;
+
     /* No arguments, we must be executed from an OS, hopefully Linux :D */
     if (arg == 0x0) {
-        scall_linux_write(1, hv_exe_warning, sizeof(hv_exe_warning));
-        scall_linux_exit(0xff);
+        os_error_stub();
         return;
     } 
+    console_font_t *videoram = PC_VIDEORAM_BASE_ADDRESS;
+    /* Clear screen without 32bit code */
+    for (int i = 0; i < CONFIG_CONSOLE_WIDTH * CONFIG_CONSOLE_HEIGHT; i++) {
+       videoram[i] = 0;
+    }
 
-    // TODO
+    int i = 0;
+    while (*hello) {
+        videoram[i] = *hello++;
+    }
+    
     while (1) {
         ;
     }
