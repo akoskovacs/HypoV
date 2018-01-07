@@ -11,4 +11,7 @@ char hexdigit(int n);
 void itoa(int num, int base, char *buffer);
 void uitoa(unsigned int num, unsigned int base, char *buffer);
 
+void bzero(void *target, size_t size);
+void *memcpy(void *dest, const void *src, size_t n);
+
 #endif // STRING_H

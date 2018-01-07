@@ -137,3 +137,22 @@ void uitoa(unsigned int num, unsigned int base, char *buffer)
 		*buffer++ = tmp[i];
 	*buffer = '\0';
 }
+
+void bzero(void *target, size_t n)
+{
+	char *s = (char *)target;
+	while (n--) {
+		*s = '\0';
+	}
+}
+
+void *memcpy(void *dest, const void *src, size_t n)
+{
+	uint8_t *ds 	  = dest;
+	const uint8_t *ts = src;
+
+	while (n--) {
+		*ds++ = *ts++;
+	}
+	return dest;
+}
