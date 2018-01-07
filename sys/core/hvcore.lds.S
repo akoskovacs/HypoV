@@ -13,7 +13,7 @@ ENTRY(hv_entry_64)
 
 SECTIONS 
 {
-    . = 0x0;
+    . = 0x1000;
     .text : ALIGN(2M)
     {
         *(.text)
@@ -29,13 +29,18 @@ SECTIONS
         *(.rodata)
     }
 
-    .common : ALIGN(4K)
+    .note :
     {
-        *(.common)
+        *(.note.gnu.build-id)
     }
 
     .bss : ALIGN(2M)
     {
         *(.bss)
+    }
+
+    .common : ALIGN(4K)
+    {
+        *(.common)
     }
 }
