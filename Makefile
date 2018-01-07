@@ -407,8 +407,9 @@ qemufs: hypov
 qemuiso: hypov.iso
 	$(Q)$(QEMU64) -cdrom $^
 
-qemudbg: hypov
-	$(Q)$(QEMU64) -kernel $(BINARY_TARGET) -S -s
+qemudbg: hypov.iso
+	$(Q)$(QEMU64) -cdrom $^ -S -s
+	#$(Q)$(QEMU64) -kernel $(BINARY_TARGET) -S -s
 
 bochs: hypov
 	$(Q)$(BOCHS)
