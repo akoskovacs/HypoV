@@ -62,7 +62,8 @@ int cpu_set_info(struct CpuInfo *info)
     return 0;
 }
 
-void __cpu_enter_long_mode(void);
+void __cpu_long_mode_enter();
+void __cpu_gdt64_init();
 
 /*
  * Going 64bit, baby...
@@ -75,7 +76,7 @@ int cpu_init_long_mode(struct SystemInfo *info)
     msr_write(MSR_IA32_EFER, efer);
     
     /* Don't do anything if we are already in 64bit mode */
-    if (!(efer & EFER_LMA)) {
+    if (efer & EFER_LMA) {
         return 0;
     }
 
@@ -85,18 +86,15 @@ int cpu_init_long_mode(struct SystemInfo *info)
         return error;
     }
 
-#if 0
-    uint32_t cr0 = cr0_read() | CR0_PG;
-    bochs_breakpoint();
-    cr0_write(cr0);
-#endif
-
-    __cpu_enter_long_mode();
+    __cpu_long_mode_enter();
 
     /* Check if 64bit mode is activated */
     if (!(msr_read(MSR_IA32_EFER) & EFER_LMA)) {
         return -HV_GENERIC;
     }
+
+    /* Set up the new GDT for compatibility mode */
+    __cpu_gdt64_init();
 
     /* Success, everything is much better in 64bit */
     return 0;
