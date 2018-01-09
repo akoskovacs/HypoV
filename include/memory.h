@@ -12,9 +12,9 @@
 #include <types.h>
 #include <boot/multiboot.h>
 
-#define PAGE_SIZE_4K       0x1000   // 4096
+#define PAGE_SIZE_4K       0x00001000   // 4096
 #define PAGE_SHIFT_4K      12
-#define PAGE_SIZE_2M       0x200000 // 1 << 21
+#define PAGE_SIZE_2M       0x00200000 // 1 << 21
 #define PAGE_SHIFT_2M      21
 #define PAGE_ALIGN_MASK_4K 0xfffff000
 #define PAGE_ALIGN_MASK_2M 0xfff00000

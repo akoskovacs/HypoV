@@ -12,6 +12,9 @@
 #include <loader.h>
 #include <memory.h>
 #include <string.h>
+#include <hypervisor.h>
+#include <system.h>
+#include <print.h>
 
 #define ARCH_NOSPEC  0x0
 #define ARCH_X86     0x3
@@ -127,14 +130,15 @@ struct Elf64_Image *elf64_load(void *image_begin, void *image_end, void *target,
                    to compute the others' loading address */
                 base_off = phdrs[i].p_paddr;
             }
-            /* This is the offset where we going */
-            prog_ptr += phdrs[i].p_paddr - base_off;
 
             if (phdrs[i].p_flags & (PF_X | PF_R)) {
                 /* Executable, readable program segment, therefore its address is needed 
                    when entering into it, to execute it later  */
                 pexec = prog_ptr;
             }
+            /* This is the offset where we going */
+            prog_ptr += phdrs[i].p_paddr - base_off;
+            hv_printf(stdout, "loaded to: %x\n", prog_ptr);
             /* Load it to the destination, after a cleanup */
             bzero(prog_ptr, phdrs[i].p_memsz);
             memcpy(prog_ptr, prog_src, phdrs[i].p_filesz);
@@ -146,7 +150,7 @@ struct Elf64_Image *elf64_load(void *image_begin, void *image_end, void *target,
         return im;
     } else {
         /* Yay entry point */
-        im->i_entry = (void(*)(uint64_t))pexec;
+        im->i_entry = (void(*)(uint32_t))pexec;
     }
 
     return im;
@@ -177,4 +181,21 @@ struct Elf64_Image *ld_load_hvcore(struct MemoryMap *hvmap, int *error)
         return NULL;
     }
     return im;
+}
+
+extern int __cpu_call_64(struct SystemInfo *sinfo, void (*entry)(uint64_t));
+
+int ld_call_hvcore(struct SystemInfo *sysinfo)
+{
+    if (sysinfo == NULL || sysinfo->s_core_map == NULL || sysinfo->s_core_image == NULL 
+        || sysinfo->s_core_image->i_entry == NULL) {
+            return -HV_BADARG;
+    }
+
+    uint32_t sys_addr = (uint32_t)sysinfo;
+    bochs_breakpoint();
+    sysinfo->s_core_image->i_entry(sys_addr);
+
+    //__cpu_call_64(sysinfo, sysinfo->s_core_image->i_entry);
+    return 0;
 }

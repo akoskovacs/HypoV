@@ -5,6 +5,7 @@
 ; +------------------------------------------------------------+
 
 global __cpu_enter_long_mode
+global __cpu_call_64
 
 %define CR0_PG_BIT 31
 
@@ -19,3 +20,13 @@ __cpu_enter_long_mode:
     jmp .arch64         ; Should be in 64bit
 .arch64:
     ret
+
+__cpu_call_64:
+    xchg bx, bx         ; Bochs breakpoint, if needed
+    pop edi
+    pop eax
+    call eax
+    ret
+    ; call [qword rax]
+    ; db 0xff
+    ; db 0xd0

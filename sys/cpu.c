@@ -75,7 +75,7 @@ int cpu_init_long_mode(struct SystemInfo *info)
     msr_write(MSR_IA32_EFER, efer);
     
     /* Don't do anything if we are already in 64bit mode */
-    if (!(efer & EFER_LMA)) {
+    if (efer & EFER_LMA) {
         return 0;
     }
 
@@ -90,7 +90,6 @@ int cpu_init_long_mode(struct SystemInfo *info)
     bochs_breakpoint();
     cr0_write(cr0);
 #endif
-
     __cpu_enter_long_mode();
 
     /* Check if 64bit mode is activated */
