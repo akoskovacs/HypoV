@@ -16,7 +16,6 @@ global __cpu_compat_mode_disable
 %define LONG_MODE       (1 << 21)
 %define DESC_TSS        (1 << 8)|(1 << 11)
 
-
 align 4
 section .text
 bits 32

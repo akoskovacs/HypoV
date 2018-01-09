@@ -55,25 +55,29 @@ void os_error_stub(void)
     scall_linux_exit(0xff);
 }
 
-void hv_start(void *arg)
+void hv_start(uint32_t arg)
 {
     char message[] = "Hello, from 64bit land (hvcore.elf64) :D :D :D";
     char *hello = message;
 
     /* No arguments, we must be executed from an OS, hopefully Linux :D */
+#ifdef CONFIG_HV_NO_OS_STUB
     if (arg == 0x0) {
         os_error_stub();
         return;
     } 
-    console_font_t *videoram = PC_VIDEORAM_BASE_ADDRESS;
+#endif
+
+    console_font_t font = BG_COLOR_CYAN | FG_COLOR_WHITE;
+    volatile console_font_t *videoram = PC_VIDEORAM_BASE_ADDRESS;
     /* Clear screen without 32bit code */
     for (int i = 0; i < CONFIG_CONSOLE_WIDTH * CONFIG_CONSOLE_HEIGHT; i++) {
-       videoram[i] = 0;
+       videoram[i] = 0 | (font << 8);
     }
 
     int i = 0;
     while (*hello) {
-        videoram[i] = *hello++;
+        videoram[i++] = *hello++ | (font << 8);
     }
     
     while (1) {

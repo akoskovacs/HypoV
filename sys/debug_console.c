@@ -256,12 +256,14 @@ static int dc_vmm_handle_key(struct DebugScreen *scr, char key)
         sys_chainload(); 
     } else if (key == KEY_L) {
         dc_bottom_show_message(scr, "Loading...");
+#if 0
         sys_info->s_core_map = mm_alloc_phymap(sys_info->s_phy_maps, CONFIG_NR_HV_PAGES, &error);
         if (error != 0 || sys_info->s_core_map == NULL) {
             dc_bottom_show_message(scr, "Cannot allocate physical mapping...");
             return error;
         }
         dc_bottom_show_message(scr, "Physical map allocated...");
+#endif
         sys_info->s_core_image = ld_load_hvcore(sys_info->s_core_map, &error);
         if (error != 0 || sys_info->s_core_image == NULL) {
             dc_bottom_show_message(scr, "Cannot load ELF64 binary image...");
@@ -273,11 +275,8 @@ static int dc_vmm_handle_key(struct DebugScreen *scr, char key)
             dc_bottom_show_message(scr, "Failed to enter 64bit mode... :(");
         }
         dc_bottom_show_message(scr, "64bit mode activated...");
-        bochs_breakpoint();
-        /* Forceful conversion */
-        uint64_t sinfo = (uint64_t)((uint32_t)sys_info);
         dc_bottom_show_message(scr, "Starting the Hypervisor...");
-        sys_info->s_core_image->i_entry(sinfo);
+        ld_call_hvcore(sys_info);
     }
     KBD_DELAY();
     return 0;

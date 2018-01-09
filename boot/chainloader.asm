@@ -17,6 +17,8 @@ sys_chainload:
     cli
 ; Bochs breakpoint
     xchg bx, bx
+    mov esp, eax
+    mov ebp, eax
 ; Disable the A20 gate
 ;    mov al, 0x00
 ;    out 0x92, al ; Fast A20 disable
@@ -24,27 +26,34 @@ sys_chainload:
     mov eax, cr0
     xor eax, 0x1 
     mov cr0, eax
-    jmp word sys_chainload_real
+    jmp word 0x10:sys_chainload_real
     
 align 4
 bits 16
+
 sys_chainload_real:
+; Clean instruction cache
     nop
     nop
-    xor ax, ax
-    mov ds, ax
+    nop
+    nop
+    ;mov ax, 0x10 ; cs = GDT[2]
+    ;mov cs, ax
+    mov ax, 0x18 ; cs = GDT[2]
+    mov ds, ax  ; ds = GDT[3]
     mov es, ax
     mov fs, ax
     mov gs, ax
+    nop
 ; Disable A20 gate with BIOS
-    mov ax, 0x2400
-    int 0x15
+    ;mov ax, 0x2400
+    ;int 0x15
 ; Reset disk controller
-.reset_disk:
+reset_disk:
     mov ah, 0x00 ; reset function
     mov dl, 0x80 ; 1. hard disk drive
     int 0x13
-    jc .reset_disk
+    jc reset_disk
 ; Load the boot sector at 0x0000:0x7c00
     mov bx, 0x0000
     mov es, bx

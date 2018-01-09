@@ -62,8 +62,8 @@ int cpu_set_info(struct CpuInfo *info)
     return 0;
 }
 
-void __cpu_long_mode_enter();
-void __cpu_gdt64_init();
+extern void __cpu_long_mode_enter(void);
+extern void __cpu_gdt64_init(void);
 
 /*
  * Going 64bit, baby...

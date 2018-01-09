@@ -26,11 +26,14 @@ struct Elf64_Image
     char               *i_strtab;        /* NULL terminated */
     size_t              i_strtab_size;
 
-    void (*i_entry)(uint64_t);
+    void (*i_entry)(uint32_t);
 };
+
+struct SystemInfo;
 
 bool elf64_is_header_valid(struct Elf64_Hdr *header);
 struct Elf64_Image *elf64_load(void *image_begin, void *image_end, void *target, int *error);
 struct Elf64_Image *ld_load_hvcore(struct MemoryMap *hvmap, int *error);
+int                 ld_call_hvcore(struct SystemInfo *sysinfo);
 
 #endif // LOADER_H
