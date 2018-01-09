@@ -152,6 +152,8 @@ struct Elf64_Image *elf64_load(void *image_begin, void *image_end, void *target,
     return im;
 }
 
+extern void __cpu_compat_mode_disable();
+
 struct Elf64_Image *ld_load_hvcore(struct MemoryMap *hvmap, int *error)
 {
     struct Elf64_Image *im = NULL;
