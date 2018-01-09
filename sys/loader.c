@@ -156,8 +156,6 @@ struct Elf64_Image *elf64_load(void *image_begin, void *image_end, void *target,
     return im;
 }
 
-extern void __cpu_compat_mode_disable();
-
 struct Elf64_Image *ld_load_hvcore(struct MemoryMap *hvmap, int *error)
 {
     struct Elf64_Image *im = NULL;
@@ -185,7 +183,7 @@ struct Elf64_Image *ld_load_hvcore(struct MemoryMap *hvmap, int *error)
     return im;
 }
 
-extern int __cpu_call_64(struct SystemInfo *sinfo, void (*entry)(uint64_t));
+extern void __cpu_compat_mode_disable(void);
 
 int ld_call_hvcore(struct SystemInfo *sysinfo)
 {
@@ -196,8 +194,7 @@ int ld_call_hvcore(struct SystemInfo *sysinfo)
 
     uint32_t sys_addr = (uint32_t)sysinfo;
     bochs_breakpoint();
+    __cpu_compat_mode_disable();
     sysinfo->s_core_image->i_entry(sys_addr);
-
-    //__cpu_call_64(sysinfo, sysinfo->s_core_image->i_entry);
     return 0;
 }
