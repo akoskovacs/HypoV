@@ -63,7 +63,6 @@ int cpu_set_info(struct CpuInfo *info)
 }
 
 extern void __cpu_long_mode_enter(void);
-extern void __cpu_gdt64_init(void);
 
 /*
  * Going 64bit, baby...
@@ -77,7 +76,7 @@ int cpu_init_long_mode(struct SystemInfo *info)
     
     /* Don't do anything if we are already in 64bit mode */
     if (efer & EFER_LMA) {
-        return 0;
+        return -HV_EWONTDO;
     }
 
     /* Setup all the paging levels needed for now */
@@ -93,9 +92,7 @@ int cpu_init_long_mode(struct SystemInfo *info)
         return -HV_GENERIC;
     }
 
-    /* Set up the new GDT for compatibility mode */
-    __cpu_gdt64_init();
-
-    /* Success, everything is much better in 64bit */
+    /* Success, everything is much better in 64bit. :)
+       Unfortunately, it's still the compatibility submode. :( */
     return 0;
 }

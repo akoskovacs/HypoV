@@ -23,7 +23,8 @@ enum HV_ERROR {
     HV_EMISALIGN,   // Pointer/address is misaligned
     HV_ENOINFO,     // System information structure (struct SystemInfo) is missing
     HV_ENOSUPP,     // Not suppoted operation (ex.: no such cpu feature)
-    HV_ETOOLONG     // Coordinates are out of scope
+    HV_EWONTDO,     // No sane reason to do the required operation
+    HV_ETOOLONG     // Argument is out of range
 };
 
 /* eptr is an int *, error is an error from the enum above */
