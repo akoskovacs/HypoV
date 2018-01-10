@@ -7,6 +7,8 @@
 global __cpu_long_mode_enter
 global __cpu_call_64
 
+; %include "cpu_ll.inc"
+
 %define CR0_PG_BIT 31
 
 %define DESC_32BIT          (1 << 22)
@@ -42,15 +44,20 @@ __cpu_long_mode_enter:
 ; new Global Descriptor Table. The IDT will be cleared.
 
 ; XXX: Must be already in 64 bit compatibility mode
+; void __noreturn __cpu_call_64(uint32_t jmp_addr, uint32_t arg0);
 __cpu_call_64:
     xchg bx, bx
     ; This function won't return, no need for 
-    ; subroutine prologues, just get the first
-    ; parameter (uint32_t jmp_addr)
+    ; subroutine prologues, just get the first two
+    ; parameters (uint32_t jmp_addr, uint32_t arg0)
     mov eax, [esp + 4]
+    ; The second parameter uses the 64bit 
+    ; calling convention. The function parameter 
+    ; will appear in the RDI register.
+    mov edi, [esp + 8]
     ; Modify target on-the-fly
     mov dword [.jmp_addr], eax
-    ; Setup empty LDTR
+    ; Setup an empty IDTR
     lidt [idt_segment_64]
     ; Setup GDTR
     lgdt [gdt_segment_64]

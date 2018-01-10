@@ -183,7 +183,7 @@ struct Elf64_Image *ld_load_hvcore(struct MemoryMap *hvmap, int *error)
     return im;
 }
 
-extern void __cpu_call_64(uint32_t addr);
+extern void __cpu_call_64(uint32_t addr, uint32_t arg0);
 
 int ld_call_hvcore(struct SystemInfo *sysinfo)
 {
@@ -193,8 +193,9 @@ int ld_call_hvcore(struct SystemInfo *sysinfo)
     }
 
     bochs_breakpoint();
+    uint32_t sys_addr  = (uint32_t)sysinfo;
     uint32_t func_addr = (uint32_t)sysinfo->s_core_image->i_entry;
     //hv_printf(stdout, "Calling into 64bit at %x\n", func_addr);
-    __cpu_call_64(func_addr);
+    __cpu_call_64(func_addr, sys_addr);
     return 0;
 }
