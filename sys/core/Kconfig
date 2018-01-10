@@ -1,4 +1,15 @@
 menu "Hypervisor"
+    config HV_OS_STUB
+        default yes
+        bool "Show warning if executed from an operating system"
+        ---help---
+            When enabled an OS stub will be compiled in to hvcore.elf64, making
+            it properly executable from Linux (at the moment). The binary will
+            give an error and exit, as it cannot be used within an operating system.
+
+            Starting hvcore.elf64 in Linux without this option will yield a 
+            segmentation fault, therefore it is enabled by default.
+
     config NR_HV_PAGES
         default 16
         int "Number of 2MB pages allocated for the hypervisor"
@@ -6,8 +17,12 @@ menu "Hypervisor"
             The number of physical memory pages allocated for the core hypervisor.
             In the default configuration with 16 2MB pages, this will give 32MB of
             usable memory for all core functionality.
-    
+
     config SZ_HV_STACK
         default 8192
-        int "Stack size"
+        int "Size of the stack in bytes"
+        ---help---
+            Size of the fixed stack used by the hypervisor after the memory load.
+            Must be a multiple of 4096.
+
 endmenu

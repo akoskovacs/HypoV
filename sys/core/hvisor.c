@@ -55,8 +55,6 @@ void os_error_stub(void)
     scall_linux_exit(0xff);
 }
 
-#define CONFIG_HV_OS_STUB 1
-
 void hv_start(uint32_t arg)
 {
     char message[] = "Hello, from 64bit land (hvcore.elf64) :D :D :D";

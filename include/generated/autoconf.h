@@ -3,6 +3,7 @@
  * HypoV Configuration
  */
 #define CONFIG_STACK_SIZE 4096
+#define CONFIG_HV_OS_STUB 1
 #define CONFIG_NR_HV_PAGES 16
 #define CONFIG_PRINTF_BUFFER_SIZE 512
 #define CONFIG_SZ_HV_STACK 8192
