@@ -7,6 +7,7 @@
  * +------------------------------------------------------------+
 */
 #include <drivers/video/pc_console.h>
+#include <system.h>
 
 /* 
  * This code is contained in a proper ELF64 binary image. It is built
@@ -81,6 +82,6 @@ void hv_start(uint32_t arg)
     }
     
     while (1) {
-        ;
+        halt();
     }
 }
