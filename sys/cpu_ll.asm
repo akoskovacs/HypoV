@@ -47,7 +47,7 @@ __cpu_long_mode_enter:
 ; void __noreturn __cpu_call_64(uint32_t jmp_addr, uint32_t arg0);
 __cpu_call_64:
     xchg bx, bx
-    ; This function won't return, no need for 
+    ; This function will not return, no need for 
     ; subroutine prologues, just get the first two
     ; parameters (uint32_t jmp_addr, uint32_t arg0)
     mov eax, [esp + 4]

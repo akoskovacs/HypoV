@@ -49,7 +49,7 @@ hv_multiboot_entry:
 ; The stack grows down from the reserved area
     mov esp, hv_stack+CONFIG_STACK_SIZE
     mov ebp, esp
-; If the magic number is wrong, we can't trust the bootloader 
+; If the magic number is wrong, we cannot trust the bootloader 
 ; anymore. Abort booting and try to chainload something else.
     cmp eax, MB_LDR_MAGIC
     jne .panic_chainload
