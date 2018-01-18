@@ -205,7 +205,7 @@ $(obj)/%.o: $(src)/%.S FORCE
 # Compile NASM assembly sources as well (.asm) after preprocessing with CPP
 
 quiet_cmd_nasm_o_asm = NASM$(quiet_modtag) $@
-cmd_nasm_o_asm 	 	 = $(CPREPROC) -D__ASSEMBLY__ $(c_flags) $< | $(NASM) $(nasm_flags) -o $@ $<
+cmd_nasm_o_asm 	 	 = $(CPREPROC) -P -D__ASSEMBLY__ $(c_flags) $< | $(NASM) $(nasm_flags) -o $@ $<
 
 $(obj)/%.o: $(src)/%.asm FORCE
 	$(call if_changed,nasm_o_asm)
