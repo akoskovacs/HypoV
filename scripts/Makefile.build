@@ -22,13 +22,13 @@ EXTRA_CFLAGS   :=
 EXTRA_CPPFLAGS :=
 EXTRA_LDFLAGS  :=
 asflags-y  :=
-nasmflags-y  :=
+yasmflags-y  :=
 ccflags-y  :=
 cppflags-y :=
 ldflags-y  :=
 
 subdir-asflags-y :=
-subdir-nasmflags-y :=
+subdir-yasmflags-y :=
 subdir-ccflags-y :=
 
 # Read auto.conf if it exists, otherwise ignore
@@ -202,15 +202,18 @@ cmd_as_o_S       = $(CC) $(a_flags) -c -o $@ $<
 $(obj)/%.o: $(src)/%.S FORCE
 	$(call if_changed_dep,as_o_S)
 
-# Compile NASM assembly sources as well (.asm) after preprocessing with CPP
+# Compile YASM assembly sources as well (.asm) after preprocessing with CPP
 
-quiet_cmd_nasm_o_asm = NASM$(quiet_modtag) $@
-cmd_nasm_o_asm 	 	 = $(CPREPROC) -P -D__ASSEMBLY__ $(c_flags) $< | $(NASM) $(nasm_flags) -o $@ $<
+quiet_cmd_cpp_o_i    = CPP$(quiet_modtag) $@
+cmd_cmd_o_i 	 	 = $(CPREPROC) -P -D__ASSEMBLY__ $(c_flags) -o $@ $<
+
+quiet_cmd_yasm_o_asm = YASM$(quiet_modtag) $@
+cmd_yasm_o_asm 	 	 = $(CPREPROC) -P -D__ASSEMBLY__ $(c_flags) $< | $(YASM) $(yasm_flags) -o $@ -
 
 $(obj)/%.o: $(src)/%.asm FORCE
-	$(call if_changed,nasm_o_asm)
+	$(call if_changed,yasm_o_asm)
 
-# End of NASM rules
+# End of YASM rules
 
 targets += $(real-objs-y) $(lib-y) $(real-hvobjs-y)
 targets += $(extra-y) $(MAKECMDGOALS) $(always)

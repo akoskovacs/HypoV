@@ -1,7 +1,7 @@
 before_script:
-    - apt-get update -qq && apt-get -y -qq install build-essential nasm grub-common grub-pc-bin xorriso
+    - apt-get update -qq && apt-get -y -qq install build-essential yasm grub-common grub-pc-bin xorriso
     - gcc --version
-    - nasm -v
+    - yasm --version
     - make -v
 
 stages:

@@ -419,7 +419,7 @@ int conf_read(const char *name)
 
 enum CONFIG_FILE_TYPE {
 	CF_C_HEADER,
-	CF_NASM_HEADER,
+	CF_YASM_HEADER,
 	CF_MAKE
 };
 
@@ -433,7 +433,7 @@ static void conf_write_string(enum CONFIG_FILE_TYPE ftype, const char *name,
 		fprintf(out, "#define %s%s \"", CONFIG_, name);
 		break;
 
-		case CF_NASM_HEADER:
+		case CF_YASM_HEADER:
 		fprintf(out, "%%define %s%s \"", CONFIG_, name);
 		break;
 
@@ -442,7 +442,7 @@ static void conf_write_string(enum CONFIG_FILE_TYPE ftype, const char *name,
 		break;
 	}
 
-	/* Hopefully NASM breaks strings up like this */
+	/* Hopefully YASM breaks strings up like this */
 	while (1) {
 		l = strcspn(str, "\"\\");
 		if (l) {
@@ -789,8 +789,8 @@ int conf_write_autoconf(void)
 	struct symbol *sym;
 	const char *str;
 	const char *name;
-	char *nasm_name;
-	char nasm_ext[] = "inc";
+	char *yasm_name;
+	char yasm_ext[] = "inc";
 	size_t name_len = 0;
 	FILE *out, *tristate, *out_h, *out_inc;
 	int i;
@@ -882,7 +882,7 @@ int conf_write_autoconf(void)
 			break;
 		case S_STRING:
 			conf_write_string(CF_C_HEADER, sym->name, sym_get_string_value(sym), out_h);
-			conf_write_string(CF_NASM_HEADER, sym->name, sym_get_string_value(sym), out_inc);
+			conf_write_string(CF_YASM_HEADER, sym->name, sym_get_string_value(sym), out_inc);
 			break;
 		case S_HEX:
 			str = sym_get_string_value(sym);
@@ -918,16 +918,16 @@ int conf_write_autoconf(void)
 
 	/* Hopefully the header extension is .h, so we can just change that to .inc */
 	name_len  = strlen(name);
-	nasm_name = (char *)calloc(name_len+sizeof(nasm_ext), sizeof(char));
-	strcpy(nasm_name, name);
+	yasm_name = (char *)calloc(name_len+sizeof(yasm_ext), sizeof(char));
+	strcpy(yasm_name, name);
 	/* Overwrite the 'h' */
-	strcpy(nasm_name+name_len-1, nasm_ext);
+	strcpy(yasm_name+name_len-1, yasm_ext);
 
-	if (rename(".tmpconfig.inc", nasm_name)) {
-		free(nasm_name);
+	if (rename(".tmpconfig.inc", yasm_name)) {
+		free(yasm_name);
 		return 1;
 	}
-	free(nasm_name);
+	free(yasm_name);
 
 	name = getenv("KCONFIG_TRISTATE");
 	if (!name)

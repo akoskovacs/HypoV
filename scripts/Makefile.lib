@@ -1,6 +1,6 @@
 # Backward compatibility
 asflags-y  += $(EXTRA_AFLAGS)
-nasmflags-y  += $(EXTRA_NASMFLAGS)
+yasmflags-y  += $(EXTRA_YASMFLAGS)
 ccflags-y  += $(EXTRA_CFLAGS)
 cppflags-y += $(EXTRA_CPPFLAGS)
 ldflags-y  += $(EXTRA_LDFLAGS)
@@ -8,7 +8,7 @@ ldflags-y  += $(EXTRA_LDFLAGS)
 #
 # flags that take effect in sub directories
 export KBUILD_SUBDIR_ASFLAGS := $(KBUILD_SUBDIR_ASFLAGS) $(subdir-asflags-y)
-export KBUILD_SUBDIR_ASFLAGS := $(KBUILD_SUBDIR_ASFLAGS) $(subdir-nasmflags-y)
+export KBUILD_SUBDIR_ASFLAGS := $(KBUILD_SUBDIR_ASFLAGS) $(subdir-yasmflags-y)
 export KBUILD_SUBDIR_CCFLAGS := $(KBUILD_SUBDIR_CCFLAGS) $(subdir-ccflags-y)
 
 # Figure out what we need to build from the various variables
@@ -69,8 +69,8 @@ orig_c_flags   = $(KBUILD_CPPFLAGS) $(KBUILD_CFLAGS) $(KBUILD_SUBDIR_CCFLAGS) \
 _c_flags       = $(filter-out $(CFLAGS_REMOVE_$(basetarget).o), $(orig_c_flags))
 _a_flags       = $(KBUILD_CPPFLAGS) $(KBUILD_AFLAGS) $(KBUILD_SUBDIR_ASFLAGS) \
                  $(asflags-y) $(AFLAGS_$(basetarget).o)
-_nasm_flags    = $(KBUILD_CPPFLAGS) $(KBUILD_AFLAGS) $(KBUILD_SUBDIR_ASFLAGS) \
-                 $(nasmflags-y) $(AFLAGS_$(basetarget).o)
+_yasm_flags    = $(KBUILD_CPPFLAGS) $(KBUILD_AFLAGS) $(KBUILD_SUBDIR_ASFLAGS) \
+                 $(yasmflags-y) $(AFLAGS_$(basetarget).o)
 _cpp_flags     = $(KBUILD_CPPFLAGS) $(cppflags-y) $(CPPFLAGS_$(@F))
 
 # If building the kernel in a separate objtree expand all occurrences
@@ -79,7 +79,7 @@ _cpp_flags     = $(KBUILD_CPPFLAGS) $(cppflags-y) $(CPPFLAGS_$(@F))
 ifeq ($(KBUILD_SRC),)
 __c_flags	= $(_c_flags)
 __a_flags	= $(_a_flags)
-__nasm_flags	= $(_nasm_flags)
+__yasm_flags	= $(_yasm_flags)
 __cpp_flags     = $(_cpp_flags)
 else
 
@@ -89,7 +89,7 @@ else
 # FIXME: Replace both with specific CFLAGS* statements in the makefiles
 __c_flags	= $(call addtree,-I$(obj)) $(call flags,_c_flags)
 __a_flags	=                          $(call flags,_a_flags)
-__nasm_flags	=                          $(call flags,_nasm_flags)
+__yasm_flags	=                          $(call flags,_yasm_flags)
 __cpp_flags     =                          $(call flags,_cpp_flags)
 endif
 
@@ -99,7 +99,7 @@ c_flags        = -Wp,-MD,$(depfile) $(NOSTDINC_FLAGS) $(LINUXINCLUDE)     \
 a_flags        = -Wp,-MD,$(depfile) $(NOSTDINC_FLAGS) $(LINUXINCLUDE)     \
 		 $(__a_flags) $(modkern_aflags)
 
-nasm_flags     = $(__nasm_flags)  -Pinclude/generated/autoconf.inc
+yasm_flags     = $(__yasm_flags)  -Pinclude/generated/autoconf.inc
 
 cpp_flags      = -Wp,-MD,$(depfile) $(NOSTDINC_FLAGS) $(LINUXINCLUDE)     \
 		 $(__cpp_flags)

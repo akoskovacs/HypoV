@@ -1,7 +1,7 @@
 subdir-ccflags-y := -m32 -march=i586
 #subdir-ldflags-y := -Wl$(comma)-melf_i386 
 LDFLAGS := -melf_i386 
-nasmflags-y := -felf32
+yasmflags-y := -felf32
 
 obj-y += drivers/
 obj-y += init.o
