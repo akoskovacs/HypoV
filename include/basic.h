@@ -31,10 +31,14 @@
 #define __unused __attribute__((unused))
 #define __used __attribute__((used))
 #define __packed __attribute__((packed))
-#define __align(A) __attribute__((aligned(A)))
+#define __align(A) __attribute__((__aligned__(A)))
 #define __weak __attribute__((weak))
 #define __naked __attribute__((naked))
 #define __noreturn __attribute__((noreturn))
+#define __always_inline __attribute__((always_inline))
+
+#define __aligned_8 __attribute__((__aligned__(8)))
+#define __aligned_16 __attribute__((__aligned__(16)))
 
 /* Section macros for initcalls */
 /*
