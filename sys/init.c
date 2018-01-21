@@ -37,6 +37,7 @@ void __noreturn hv_entry(struct MultiBootInfo *mbi)
     int error = 0;
     struct ConsoleDisplay main_display;
 
+    cpu_tables_init();
     system_info_init(&system_info);
     system_info.s_boot_info = mbi;
     system_info.s_display   = (struct CharacterDisplay *)&main_display;

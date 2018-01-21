@@ -10,6 +10,7 @@
 
 #include <basic.h>
 #include <types.h>
+#include <gdt.h>
 
 #define CPU_VENDOR_SIZE         12
 #define CPU_BRANDING_SIZE       48
@@ -99,7 +100,7 @@ enum CR0_FLAGS {
     // Reserved (19..28)
     CR0_NW  = (1ULL << 29), /* No-write through */
     CR0_CD  = (1ULL << 30), /* Cache disable */
-    CR0_PG  = (1ULL << 31), /* Paging enable */
+    CR0_PG  = (1ULL << CR0_PG_BIT), /* Paging enable */
     // Reserved (32..63)
 };
 
@@ -179,8 +180,139 @@ struct CpuInfo
     uint64_t ci_features;
 };
 
+struct __packed GDTEntry 
+{
+    uint16_t limit;
+    uint16_t base_addr;
+    uint32_t flags;
+};
+
+struct __packed TSS16
+{
+    uint16_t tss_link;
+    uint16_t sp0;
+    uint16_t ss0;
+    uint16_t sp1;
+    uint16_t ss1;
+    uint16_t sp2;
+    uint16_t ss2;
+    uint16_t ip;
+    uint16_t flag;
+    uint16_t ax;
+    uint16_t cx;
+    uint16_t dx;
+    uint16_t bx;
+    uint16_t sp;
+    uint16_t bp;
+    uint16_t si;
+    uint16_t di;
+    uint16_t es;
+    uint16_t cs;
+    uint16_t ss;
+    uint16_t ds;
+    uint16_t ldt_selector;
+};
+
+/* 
+ * Task State Segment for the 32 bit code.
+ * Reserved fields are ignored by the hardware and has
+ * to be set to 0. Only one needed, since multitasking
+ * will not be used in any 32 bit code here.
+ */
+struct __packed TSS32
+{
+    uint16_t tss_reserved_0;
+    /* Link to the next TSS (unused here) */
+    uint16_t tss_link;
+
+    /* Stack pointers and segments for ring 0, 1, 2 */
+    uint32_t tss_esp0;
+
+    uint16_t tss_reserved_1;
+    uint16_t tss_ss0;
+
+    uint32_t tss_esp1;
+
+    uint16_t tss_reserved_2; 
+    uint16_t tss_ss1; 
+
+    uint32_t tss_esp2;
+
+    uint16_t tss_reserved_3; 
+    uint16_t ss2;
+
+    /* Page level 3 pointer */
+    uint32_t tss_cr3;
+    /* Normal registers */
+    uint32_t eip;
+    uint32_t eflags;
+    uint32_t eax;
+    uint32_t ecx;
+    uint32_t edx;
+    uint32_t ebx;
+    uint32_t esp;
+    uint32_t ebp;
+    uint32_t esi;
+    uint32_t edi;
+
+    /* Segment registers */
+    uint16_t tss_reserved_4;
+    uint16_t es;
+
+    uint16_t tss_reserved_5;
+    uint16_t cs;
+
+    uint16_t tss_reserved_6;
+    uint16_t ss;
+
+    uint16_t tss_reserved_7;
+    uint16_t ds;
+
+    uint16_t tss_reserved_8;
+    uint16_t fs;
+
+    uint16_t tss_reserved_9;
+    uint16_t gs;
+
+    uint16_t tss_reserved_10;
+    /* Local Descriptor Table selector */
+    uint16_t ldt_selector;
+
+    /* I/O mapping base address */
+    uint16_t iomap_base;
+
+#define TSS32_FLAG_TRAP 0x1
+    uint16_t flags;
+};
+
+struct __packed TSS64
+{
+    uint32_t tss_reserved_0;
+    /* RSP for ring 0, 1, 2 */
+    uint32_t rsp_0_low;
+    uint32_t rsp_0_high;
+
+    uint32_t rsp_1_low;
+    uint32_t rsp_1_high;
+
+    uint32_t rsp_2_low;
+    uint32_t rsp_2_high;
+
+    uint64_t tss_reserved_1;
+
+    /* Interrupt Stack Table pointers */
+    uint64_t ist[7];
+
+    uint64_t tss_reserved_2;
+    uint16_t tss_reserved_3;
+
+    /* I/O mapping base address */
+    uint16_t iomap_base;
+};
+
 struct SystemInfo;
 
+int             cpu_tables_init(void);
 struct CpuInfo *cpu_get_info(void);
 int             cpu_set_info(struct CpuInfo *info);
 int             cpu_init_long_mode(struct SystemInfo *info);

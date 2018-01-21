@@ -138,7 +138,7 @@ struct Elf64_Image *elf64_load(void *image_begin, void *image_end, void *target,
             }
             /* This is the offset where we going */
             prog_ptr += phdrs[i].p_paddr - base_off;
-            hv_printf(stdout, "loaded to: %x\n", prog_ptr);
+            // hv_printf(stdout, "loaded to: %x\n", prog_ptr);
             /* Load it to the destination, after a cleanup */
             bzero(prog_ptr, phdrs[i].p_memsz);
             memcpy(prog_ptr, prog_src, phdrs[i].p_filesz);
@@ -184,6 +184,7 @@ struct Elf64_Image *ld_load_hvcore(struct MemoryMap *hvmap, int *error)
 }
 
 extern void __cpu_call_64(uint32_t addr, uint32_t arg0);
+extern int cpu_gdt_init(void);
 
 int ld_call_hvcore(struct SystemInfo *sysinfo)
 {
