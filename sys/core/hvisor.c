@@ -20,7 +20,8 @@
 #define SCALL_LINUX_WRITE 1
 #define SCALL_LINUX_EXIT 60
 
-static char hv_exe_warning[] = "HypoV cannot be used from operating systems.\n";
+static const char hv_exe_warning[] = "HypoV cannot be used from operating systems.\n";
+static unsigned long out_times;
 
 long scall_linux_write(long fd, const void *data, unsigned long size)
 {
@@ -58,8 +59,9 @@ void os_error_stub(void)
 
 void hv_start(uint32_t arg)
 {
-    char message[] = "Hello, from 64bit land (hvcore.elf64) :D :D :D";
-    char *hello = message;
+    const char *message = "Welcome in 64 bit land :D :D :D";
+    const char *hello = message;
+    out_times = 10;
 
     /* No arguments, we must be executed from an OS, hopefully Linux :D */
 #ifdef CONFIG_HV_OS_STUB
@@ -76,9 +78,15 @@ void hv_start(uint32_t arg)
        videoram[i] = 0 | (font << 8);
     }
 
-    int i = 0;
-    while (*hello) {
-        videoram[i++] = *hello++ | (font << 8);
+    int i, j;
+    i = j = 0;
+    while (j < out_times) {
+        hello = message;
+        i = 0;
+        while (*hello) {
+            videoram[(j * CONFIG_CONSOLE_WIDTH) + (i++)] = *hello++ | (font << 8);
+        }
+        j++;
     }
     
     while (1) {
