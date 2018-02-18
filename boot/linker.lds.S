@@ -24,12 +24,11 @@ SECTIONS
     .multiboot : AT(0x1000)
     {
         __image_start = .;
+        *(.chainloader.text)
 
         __multiboot_start = .;
         *(.multiboot.header)
         __multiboot_end = .;
-
-        *(.chainloader.text)
     }
 
     /* If everything is fine, the bootloader will
