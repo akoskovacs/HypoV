@@ -359,7 +359,10 @@ loader: stage0/stage0
 all: hypov loader
 # 32bit parts
 objs-y		:= sys boot 
-libs-y		:= lib
+# Separate compilations of the libraries for 32 and 64 bit code
+libs32-y    := lib/lib32
+libs64-y    := lib/lib64
+libs-y		:= $(libs32-y) $(libs64-y)
 # 64bit part (core hypervisor functionality)
 hvobjs-y    := sys/core
 
@@ -376,13 +379,13 @@ HVCORE_OBJ	  := $(HVCORE_DIR)/$(HVCORE_TARGET).o # 32bit binary container
 # Link the main ELF32 with the loader, debug console, and ELF64 container
 quiet_cmd_hypov = LD      $@
       cmd_hypov = $(CC) $(LDFLAGS) -o $(BINARY_TARGET) \
-      -Wl,--start-group $(hypov-libs) $(hypov-objs) $(HVCORE_OBJ) -Wl,--end-group \
+      -Wl,--start-group $(libs32-y)/lib.a $(hypov-objs) $(HVCORE_OBJ) -Wl,--end-group \
 	  -Wl,-T boot/linker.lds $(SHARED_FLAGS) -Wl,-Map $(MAPFILE) -ggdb
 
 # Link the core ELF64
 quiet_cmd_hvcore = LD      $@
       cmd_hvcore = $(CC)  -Wl,-ehv_entry_64 $(LDFLAGS) -o $(HVCORE_DIR)/$(HVCORE_TARGET) \
-	  -Wl,-T $(HVCORE_DIR)/hvcore.lds -Wl,--start-group $(hvcore-objs) $(SHARED_FLAGS) -Wl,--end-group -ggdb
+	  -Wl,-T $(HVCORE_DIR)/hvcore.lds -Wl,--start-group $(libs64-y)/lib.a $(hvcore-objs) $(SHARED_FLAGS) -Wl,--end-group -ggdb
 	 
 # Embed the ELF64 in a regular ELF32 object file
 quiet_cmd_hvobj  = OBJCOPY $@
