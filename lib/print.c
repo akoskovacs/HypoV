@@ -48,9 +48,9 @@ int hv_vsnprintf(char *dest, size_t size, const char *fmt, va_list ap)
 
                case 'x': case 'p': case 'X':
                     if (*fmt == 'x')
-                        unum = va_arg(ap, unsigned int);
+                        unum = va_arg(ap, unsigned long);
                     else 
-                        unum = (unsigned int)va_arg(ap, void *);
+                        unum = (unsigned long)va_arg(ap, void *);
 
                     if (*fmt != 'X') {
                         strncpy(dest+asize, "0x", size-asize);
