@@ -317,4 +317,17 @@ struct CpuInfo *cpu_get_info(void);
 int             cpu_set_info(struct CpuInfo *info);
 int             cpu_init_long_mode(struct SystemInfo *info);
 
+static inline int 
+gdt_make_entry(struct GDTEntry *ent, uint32_t base, uint32_t limit, uint32_t flags)
+{
+    /* The base and limit cannot fit into these members alone,
+       flags also contain some bits of these */
+    ent->base_addr = base  & 0xFFFFU;
+    ent->limit     = limit & 0xFFFFU;
+    /* The flags member also contains base[31:24] = flags[31:24], base[23:16] = flags[7:0]
+       and limit[19:16] = flags[19:16] */
+    ent->flags     = (uint32_t)(flags | (base & 0xFF000000U) | ((base & 0x00FF0000U) >> 16) | (limit & 0xF0000U));
+    return 0;
+}
+
 #endif // CPU_H

@@ -20,7 +20,7 @@
 #define DESC_GRANULAR       (1 << 23)
 #define DESC_SEGLIMIT_HIGH  (0xF << 16)
 
-#define GDT_NR_ENTRIES  10  /* Number of GDT entries */
+#define GDT_NR_ENTRIES  10  /* Number of GDT entries for the container */
 #define GDT_SZ_ENTRY    8   /* Size of each legacy entry */
 
 #define GDT_LIMIT_MAX32 0xFFFFFFFF
@@ -36,7 +36,28 @@
 #define GDT_SYS_TSS32   7
 #define GDT_SYS_TSS64   8
 
+#define GDT_NR_HV_ENTRIES 4/* Number of GDT entries for the hypervisor */
+#define GDT_HV_NULL    0
+#define GDT_HV_CODE64  1
+#define GDT_HV_DATA64  2
+#define GDT_HV_IDT64   3
+#define GDT_HV_TSS64   4
+
+#define TSS_BUSY        0xB00
+#define TSS_AVAILABLE   0x900
+
 #define GDT_SEL(gdt_idx)    ((gdt_idx) * GDT_SZ_ENTRY)
+
+#define GDT_CODE16_FLAGS (DESC_PRESENT | DESC_CODE | DESC_CS_READ)
+#define GDT_DATA16_FLAGS (DESC_PRESENT | DESC_DATA | DESC_DS_WRITE)
+
+#define GDT_CODE32_FLAGS (DESC_PRESENT | DESC_CODE | DESC_CS_READ | DESC_32BIT | DESC_GRANULAR)
+#define GDT_DATA32_FLAGS (DESC_PRESENT | DESC_DATA | DESC_DS_WRITE | DESC_32BIT | DESC_GRANULAR)
+
+#define GDT_CODE64_FLAGS (DESC_PRESENT | DESC_CODE | DESC_CS_READ | DESC_64BIT)
+#define GDT_DATA64_FLAGS (DESC_PRESENT | DESC_DATA | DESC_DS_WRITE | DESC_64BIT)
+
+#define GDT_IDT64_FLAGS 0x0
 
 #define CR0_PG_BIT 31
 
