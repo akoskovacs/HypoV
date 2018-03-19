@@ -172,6 +172,16 @@ void msr_write(uint32_t msr, uint64_t value)
                                  : "c"(msr), "d"(high), "a"(low));
 }
 
+static inline
+{
+    __asm__ __volatile__("sti");
+}
+
+static inline
+void int_disable(void)
+{
+    __asm__ __volatile__("cli");
+}
 /* Invalidate the Translation Lookaside Buffer in uniprocessor mode */
 static inline
 void tlb_flush(unsigned long addr)
