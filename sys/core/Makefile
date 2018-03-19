@@ -8,3 +8,6 @@ yasmflags-y := -felf64
 always := hvcore.lds
 hvobj-y += head.o
 hvobj-y += hvisor.o
+hvobj-y += elf_os_stub.o
+hvobj-y += host_cpu.o
+hvobj-y += host_cpu_ll.o
