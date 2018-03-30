@@ -6,3 +6,9 @@ tags
 *.img
 *.bin
 *.cmd
+*.lds
+*.xz
+*.elf
+*.elf64
+*.iso
+bochout.txt
