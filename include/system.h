@@ -92,6 +92,7 @@ void rdtsc(uint32_t *upper, uint32_t *lower)
     __asm__ __volatile__("rdtsc" : "=a"(*lower), "=d"(*upper));
 }
 
+/* Instructions for Control Register modifications */
 static inline
 uint32_t cr0_read(void)
 {
@@ -153,6 +154,7 @@ void cr4_write(uint32_t value)
                                         : "r"(value));
 }
 
+/* Instructions for Machine Specific Registers */
 static inline
 uint64_t msr_read(uint32_t msr)
 {
@@ -172,6 +174,7 @@ void msr_write(uint32_t msr, uint64_t value)
                                  : "c"(msr), "d"(high), "a"(low));
 }
 
+/* Instructions for interrupt handling */
 static inline 
 void int_enable(void)
 {
@@ -182,6 +185,19 @@ static inline
 void int_disable(void)
 {
     __asm__ __volatile__("cli");
+}
+
+/* Instructions for Virtual Machine Extensions */
+static inline
+void vmxon(void *vmcs)
+{
+    __asm__ __volatile__("vmxon %0" : : "m" (vmcs));
+}
+
+static inline
+void vmxoff(void)
+{
+    __asm__ __volatile__("vmxoff");
 }
 
 /* Invalidate the Translation Lookaside Buffer in uniprocessor mode */
