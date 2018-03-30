@@ -6,4 +6,11 @@ menu "Debug Console"
     endmenu
 endmenu
 
-source "sys/core/Kconfig"
+menu "Hypervisor"
+    menu "Compression"
+        source "sys/xz/Kconfig"
+    endmenu
+
+    source "sys/core/Kconfig"
+endmenu
+

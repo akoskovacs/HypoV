@@ -4,6 +4,7 @@ LDFLAGS := -melf_i386
 yasmflags-y := -felf32
 
 obj-y += drivers/
+obj-y += xz/
 obj-y += init.o
 obj-y += char_display.o
 obj-y += debug_console.o

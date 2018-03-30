@@ -173,7 +173,6 @@ AS		= $(CROSS_COMPILE)as
 LD		= $(CROSS_COMPILE)ld
 CC		= $(CROSS_COMPILE)gcc
 YASM    = $(CROSS_COMPILE)yasm
-YASM    = $(CROSS_COMPILE)yasm
 CPP		= $(CC) -E
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -181,6 +180,7 @@ STRIP		= $(CROSS_COMPILE)strip
 OBJCOPY		= $(CROSS_COMPILE)objcopy
 OBJDUMP		= $(CROSS_COMPILE)objdump
 AWK			= awk
+XZ      	= xz
 INSTALLHVISOR  := installkernel
 PERL		= perl
 QEMU32	= qemu-system-i386
@@ -219,7 +219,7 @@ HVISORRELEASE = $(shell cat include/config/kernel.release 2> /dev/null)
 HVISORVERSION = $(VERSION)$(if $(PATCHLEVEL),.$(PATCHLEVEL)$(if $(SUBLEVEL),.$(SUBLEVEL)))$(EXTRAVERSION)
 
 export ARCH SRCARCH CONFIG_SHELL HOSTCC HOSTCFLAGS CROSS_COMPILE AS LD CC CPREPROC
-export CPP AR NM STRIP OBJCOPY OBJDUMP YASM YASM
+export CPP AR NM STRIP OBJCOPY OBJDUMP YASM XZ
 export MAKE AWK GENKSYMS INSTALLHVISOR PERL UTS_MACHINE
 export HOSTCXX HOSTCXXFLAGS SHARED_FLAGS
 
@@ -374,7 +374,9 @@ hypov-all	:= $(hypov-objs) $(hypov-libs) $(hvcore-objs)
 
 HVCORE_DIR    := sys/core
 HVCORE_TARGET := hvcore.elf64
-HVCORE_OBJ	  := $(HVCORE_DIR)/$(HVCORE_TARGET).o # 32bit binary container
+HVCORE_ELF64  := $(HVCORE_DIR)/$(HVCORE_TARGET)	   # The main 64 bit hypervisor ELF
+HVCORE_XZ     := $(HVCORE_DIR)/$(HVCORE_TARGET).xz # compressed image of the object
+HVCORE_OBJ	  := $(HVCORE_DIR)/$(HVCORE_TARGET).o  # 32bit ELF binary container object
 
 # Link the main ELF32 with the loader, debug console, and ELF64 container
 quiet_cmd_hypov = LD      $@
@@ -386,18 +388,23 @@ quiet_cmd_hypov = LD      $@
 quiet_cmd_hvcore = LD      $@
       cmd_hvcore = $(CC)  -Wl,-ehv_entry_64 $(LDFLAGS) -o $(HVCORE_DIR)/$(HVCORE_TARGET) \
 	  -Wl,-T $(HVCORE_DIR)/hvcore.lds -Wl,--start-group $(libs64-y)/lib.a $(hvcore-objs) $(SHARED_FLAGS) -Wl,--end-group -ggdb
-	 
-# Embed the ELF64 in a regular ELF32 object file
+
+# Compress the target ELF64 with XZ
+quiet_cmd_hvcore_xz = XZ      $@
+      cmd_hvcore_xz = $(XZ) -kf $(HVCORE_ELF64)
+
+# Embed the compressed ELF64 in a regular ELF32 object file
 quiet_cmd_hvobj  = OBJCOPY $@
   	  cmd_hvobj  = $(OBJCOPY) -I binary -O elf32-i386 \
 	  --rename-section .data=.hvcore_payload,alloc,load,readonly,data,contents \
-	  --redefine-sym _binary_sys_core_hvcore_elf64_end=__hvcore_end \
-	  --redefine-sym _binary_sys_core_hvcore_elf64_start=__hvcore_start \
-	  --redefine-sym _binary_sys_core_hvcore_elf64_size=__hvcore_size \
-	  --binary-architecture i386 $(HVCORE_DIR)/$(HVCORE_TARGET) $(HVCORE_OBJ)
+	  --redefine-sym _binary_sys_core_hvcore_elf64_xz_end=__hvcore_end \
+	  --redefine-sym _binary_sys_core_hvcore_elf64_xz_start=__hvcore_start \
+	  --redefine-sym _binary_sys_core_hvcore_elf64_xz_size=__hvcore_size \
+	  --binary-architecture i386 $(HVCORE_XZ) $(HVCORE_OBJ)
 
 hypov: $(hypov-all)
 	$(call if_changed,hvcore)
+	$(call if_changed,hvcore_xz)
 	$(call if_changed,hvobj)
 	$(call if_changed,hypov)
 	@echo -n "  [Multiboot "
@@ -458,7 +465,7 @@ $(hypov-dirs): scripts_basic
 
 # Directories & files removed with 'make clean'
 CLEAN_DIRS  += 
-CLEAN_FILES +=	$(BINARY_TARGET) hypov.iso etc/grub/boot/$(BINARY_TARGET)
+CLEAN_FILES +=	$(BINARY_TARGET) hypov.iso etc/grub/boot/$(BINARY_TARGET) $(HVCORE_XZ)
 
 # Directories & files removed with 'make mrproper'
 MRPROPER_DIRS  += include/config include/generated
