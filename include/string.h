@@ -13,5 +13,10 @@ void uitoa(unsigned int num, unsigned int base, char *buffer);
 
 void bzero(void *target, size_t size);
 void *memcpy(void *dest, const void *src, size_t n);
+bool memeq(const void *a, const void *b, size_t size);
+void memzero(void *buf, size_t size);
+void *memmove(void *dest, const void *src, size_t size);
+int memcmp(const void *cs, const void *ct, size_t count);
+void *memset(void *s, int c, size_t count);
 
 #endif // STRING_H
