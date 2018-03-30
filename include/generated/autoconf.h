@@ -2,10 +2,18 @@
  * Automatically generated C config: don't edit
  * HypoV Configuration
  */
+#define CONFIG_XZ_DEC_IA64 1
 #define CONFIG_STACK_SIZE 4096
+#define CONFIG_XZ_DEC_X86 1
 #define CONFIG_HV_OS_STUB 1
+#define CONFIG_XZ_DEC_BCJ 1
+#define CONFIG_XZ_DEC 1
 #define CONFIG_NR_HV_PAGES 16
 #define CONFIG_PRINTF_BUFFER_SIZE 512
+#define CONFIG_XZ_DEC_POWERPC 1
 #define CONFIG_SZ_HV_STACK 8192
+#define CONFIG_XZ_DEC_SPARC 1
+#define CONFIG_XZ_DEC_ARM 1
 #define CONFIG_NR_MMAP_MAX_ENTRIES 10
 #define CONFIG_CROSS_COMPILE ""
+#define CONFIG_XZ_DEC_ARMTHUMB 1
