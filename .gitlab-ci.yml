@@ -16,3 +16,5 @@ package:
         - hypov.iso
         - hypov.bin
         - HypoV.map
+        - sys/core/hvcore.elf64
+        - sys/core/hvcore.elf64.xz
