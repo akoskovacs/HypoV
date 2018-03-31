@@ -4,7 +4,9 @@ mainmenu "HypoV Configuration"
 #	string
 #	option env="SRCARCH"
 
-#source "arch/$SRCARCH/Kconfig"
+config X86
+	bool
+	default y
 
 config CROSS_COMPILE
 	string "Cross-compiler tool prefix"

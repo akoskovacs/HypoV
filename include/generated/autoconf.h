@@ -3,6 +3,7 @@
  * HypoV Configuration
  */
 #define CONFIG_XZ_DEC_IA64 1
+#define CONFIG_X86 1
 #define CONFIG_STACK_SIZE 4096
 #define CONFIG_XZ_DEC_X86 1
 #define CONFIG_HV_OS_STUB 1
