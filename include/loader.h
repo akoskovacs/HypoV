@@ -32,8 +32,9 @@ struct Elf64_Image
 struct SystemInfo;
 
 bool elf64_is_header_valid(struct Elf64_Hdr *header);
+int ld_deflate_hvcore(struct MemoryMap *hvmap, int *error, void **elf_image);
 struct Elf64_Image *elf64_load(void *image_begin, void *image_end, void *target, int *error);
-struct Elf64_Image *ld_load_hvcore(struct MemoryMap *hvmap, int *error);
+struct Elf64_Image *ld_load_hvcore(struct MemoryMap *hvmap, int *error, void *im_start, int sz_image);
 int                 ld_call_hvcore(struct SystemInfo *sysinfo);
 
 #endif // LOADER_H

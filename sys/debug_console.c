@@ -170,7 +170,7 @@ int dc_keyboard_handler(char scancode)
             dc_show_screen(ds_screen+ind);
             KBD_DELAY();
         }
-        return 0; 
+        return 0;
     }
 
     if (current_screen) {
@@ -242,18 +242,21 @@ static int dc_vmm_info_show(struct DebugScreen *scr)
     hv_disp_puts(cdisp, "[C] - Press C to resume loading from the first hard disk");
     hv_console_set_xy(current_display, 10, 22);
     hv_disp_puts(cdisp, "[L] - Load the Hypervisor");
-    return 0;    
+    return 0;
 }
 
 static int dc_vmm_handle_key(struct DebugScreen *scr, char key)
 {
     int error = 0;
+    void *elf_start = 0x0;
+
+    int sz_image;
     if (key == KEY_R) {
         dc_bottom_show_message(scr, "Restarting...");
         sys_reboot();
     } else if (key == KEY_C) {
         dc_bottom_show_message(scr, "Resume loading from the disk...");
-        sys_chainload(); 
+        sys_chainload();
     } else if (key == KEY_L) {
         dc_bottom_show_message(scr, "Loading...");
 #if 0
@@ -264,7 +267,15 @@ static int dc_vmm_handle_key(struct DebugScreen *scr, char key)
         }
         dc_bottom_show_message(scr, "Physical map allocated...");
 #endif
-        sys_info->s_core_image = ld_load_hvcore(sys_info->s_core_map, &error);
+        dc_bottom_show_message(scr, "Decompressing the Hypervisor...");
+        sz_image = ld_deflate_hvcore(sys_info->s_core_map, &error, &elf_start);
+        if (sz_image <= 0) {
+            dc_bottom_show_message(scr, "Cannot decompress image...");
+            return error;
+        }
+
+        dc_bottom_show_message(scr, "Loading the ELF64 image...");
+        sys_info->s_core_image = ld_load_hvcore(sys_info->s_core_map, &error, elf_start, sz_image);
         if (error != 0 || sys_info->s_core_image == NULL) {
             dc_bottom_show_message(scr, "Cannot load ELF64 binary image...");
             return error;
@@ -368,7 +379,7 @@ static void mem_info_dump(struct DebugScreen *scr, struct PhysicalMMapping *phym
     int nr_skip = ind_mmap_page*CONFIG_NR_MMAP_MAX_ENTRIES;
     struct MemoryMap *mmap = phymm->sm_maps+nr_skip;
     uint64_t size;
-    
+
     hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
     for (i = 0; (i < nr_skip+phymm->sm_nr_maps) && (i < CONFIG_NR_MMAP_MAX_ENTRIES); i++, mmap++) {
         size = (mmap->mm_end - mmap->mm_start);
@@ -405,7 +416,7 @@ static int dc_mem_info_show(struct DebugScreen *scr)
     nr_mmap_pages          += (sys_mmap->sm_nr_maps % CONFIG_NR_MMAP_MAX_ENTRIES) > 0;
     is_mmap_needs_scrolling = nr_mmap_pages > 1;
 
-    if ((boot_info != NULL) && (sys_mmap != NULL) && (boot_info->flags & MB_INFO_MEMORY) 
+    if ((boot_info != NULL) && (sys_mmap != NULL) && (boot_info->flags & MB_INFO_MEMORY)
             && (boot_info->flags & MB_INFO_MEM_MAP)) {
         sz_mem = boot_info->mem_lower + boot_info->mem_upper;
         hv_disp_puts(cdisp, "Total memory (according to BIOS):");
@@ -425,7 +436,7 @@ static int dc_mem_info_show(struct DebugScreen *scr)
 }
 
 static int dc_mem_handle_key(struct DebugScreen *scr, char key)
-{ 
+{
     if (is_mmap_needs_scrolling) {
         if (key == KEY_SPACE) {
             if (ind_mmap_page < nr_mmap_pages-1) {
@@ -440,8 +451,8 @@ static int dc_mem_handle_key(struct DebugScreen *scr, char key)
     return 0;
 }
 
-static int dc_disk_info_show(struct DebugScreen *scr) 
-{ 
+static int dc_disk_info_show(struct DebugScreen *scr)
+{
     struct ConsoleDisplay *current_display = (struct ConsoleDisplay *)sys_info->s_display;
 
     hv_console_set_xy(current_display, 26, 11);
@@ -451,8 +462,8 @@ static int dc_disk_info_show(struct DebugScreen *scr)
 }
 static int dc_disk_handle_key(struct DebugScreen *scr, char key) { return -HV_ENOIMPL; }
 
-static int dc_guest_info_show(struct DebugScreen *scr) 
-{ 
+static int dc_guest_info_show(struct DebugScreen *scr)
+{
     return dc_disk_info_show(scr);
 }
 

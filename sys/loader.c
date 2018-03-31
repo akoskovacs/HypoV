@@ -15,10 +15,12 @@
 #include <hypervisor.h>
 #include <system.h>
 #include <print.h>
+#include <xz.h>
 
 #define ARCH_NOSPEC  0x0
 #define ARCH_X86     0x3
 #define ARCH_X86_64  0x3E
+#define SZ_MAX_PAYLOAD 10*1024*1024 // 10MB
 
 /* Pointers to the embedded ELF64 core image */
 extern uint32_t __hvcore_start;
@@ -156,23 +158,45 @@ struct Elf64_Image *elf64_load(void *image_begin, void *image_end, void *target,
     return im;
 }
 
-struct Elf64_Image *ld_load_hvcore(struct MemoryMap *hvmap, int *error)
+static void show_deflate_error(char *error)
+{
+    // TODO
+}
+
+int ld_deflate_hvcore(struct MemoryMap *hvmap, int *error, void **elf_start)
+{
+    /* These constants come from the linker when the compressed image
+       is embedded into the linked object file (by the build system, via objcopy) */
+    unsigned char *im_start = (void *)&__hvcore_start;
+    unsigned char *im_end   = (void *)&__hvcore_end;
+    int im_size             = (int *)&__hvcore_size;
+
+    uint32_t load_addr      = 0x0;
+    int sz_deflated         = 0;
+    int xz_ret;
+
+    if (hvmap == NULL || hvmap->mm_start == 0x0) {
+        return -HV_BADARG;
+    }
+
+    /* Forcefully truncate size, cannot load anything above 4GB */
+    //load_addr = (uint32_t)hvmap->mm_start;
+    *elf_start = mm_expand_heap(SZ_MAX_PAYLOAD);
+    /* Decompress the ELF64 image to the selected physical region */
+    xz_ret = unxz(im_start, im_size, NULL, NULL, *elf_start, &sz_deflated, show_deflate_error);
+
+    if (xz_ret != XZ_OK) {
+        return -HV_ENOVALID;
+    }
+
+    return sz_deflated;
+}
+
+struct Elf64_Image *ld_load_hvcore(struct MemoryMap *hvmap, int *error, void *im_start, int sz_image)
 {
     struct Elf64_Image *im = NULL;
-    void *im_start = (void *)&__hvcore_start;
-    void *im_end   = (void *)&__hvcore_end;
+    void *im_end   = (unsigned char *)im_start + sz_image;
     uint32_t laddr = 0; 
-
-    if (error == NULL) {
-        return NULL;
-    } else {
-        *error = 0;
-    }
-
-    if (hvmap == NULL) {
-        *error = -HV_BADARG;
-        return NULL;
-    }
 
     /* Forcefully truncate size, cannot load anything above 4GB */
     laddr = (uint32_t)hvmap->mm_start;

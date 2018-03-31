@@ -391,7 +391,7 @@ quiet_cmd_hvcore = LD      $@
 
 # Compress the target ELF64 with XZ
 quiet_cmd_hvcore_xz = XZ      $@
-      cmd_hvcore_xz = $(XZ) -kf $(HVCORE_ELF64)
+      cmd_hvcore_xz = $(XZ) --check=crc32 --x86 --lzma2=dict=32MiB -kf $(HVCORE_ELF64)
 
 # Embed the compressed ELF64 in a regular ELF32 object file
 quiet_cmd_hvobj  = OBJCOPY $@

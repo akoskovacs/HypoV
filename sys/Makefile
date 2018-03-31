@@ -13,3 +13,4 @@ obj-y += memory.o
 obj-y += cpu.o
 obj-y += cpu_ll.o
 obj-y += loader.o
+obj-y += decompress_unxz.o

@@ -92,7 +92,8 @@
  * support XZ, the fixed overhead has to be increased from 18+32768 bytes
  * to 128+65536 bytes.
  */
-
+#define STATIC
+#define INIT
 /*
  * STATIC is defined to "static" if we are being built for kernel
  * decompression (pre-boot code). <linux/decompress/mm.h> will define
@@ -108,10 +109,29 @@
 #endif
 #define XZ_EXTERN STATIC
 
+#include <memory.h>
+#include <xz.h>
+//#include "xz/xz_private.h"
+
+/*
+ * Replace the normal allocation functions with the versions from
+ * <linux/decompress/mm.h>. vfree() needs to support vfree(NULL)
+ * when XZ_DYNALLOC is used, but the pre-boot free() doesn't support it.
+ * Workaround it here because the other decompressors don't need it.
+ */
+#define kmalloc(size, flags) mm_expand_heap(size)
+#define kfree(ptr) (void)(ptr)
+#define malloc(size) kmalloc(size, 0)
+#define vmalloc(size) mm_expand_heap(size)
+#define vfree(ptr) (void)(ptr)
+#define free(ptr) vfree(ptr)
+
+#if 0
 #ifndef XZ_PREBOOT
 #	include <linux/slab.h>
 #	include <linux/xz.h>
 #else
+#endif
 /*
  * Use the internal CRC32 code instead of kernel's CRC32 module, which
  * is not available in early phase of booting.
@@ -143,21 +163,6 @@
  * can be defined.
  */
 #include "xz/xz_private.h"
-
-/*
- * Replace the normal allocation functions with the versions from
- * <linux/decompress/mm.h>. vfree() needs to support vfree(NULL)
- * when XZ_DYNALLOC is used, but the pre-boot free() doesn't support it.
- * Workaround it here because the other decompressors don't need it.
- */
-#undef kmalloc
-#undef kfree
-#undef vmalloc
-#undef vfree
-#define kmalloc(size, flags) malloc(size)
-#define kfree(ptr) free(ptr)
-#define vmalloc(size) malloc(size)
-#define vfree(ptr) do { if (ptr != NULL) free(ptr); } while (0)
 
 /*
  * FIXME: Not all basic memory functions are provided in architecture-specific
