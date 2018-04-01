@@ -6,17 +6,26 @@
 
 #include <gdt.h>
 
-global interrupt_handler
+global __get_relocation_offset
 global __gdt_setup_64
 global __tss_setup_64
 global __idt_setup_64
 
 section .text
-interrupt_handler:
-    ;pushad
-    ; call int_hdl
-    ;popad
-    iret
+
+; Get the offset of the current relocation for all symbols
+; unsigned long __get_relocation_offset(void)
+__get_relocation_offset:
+    lea rax, [rel __get_relocation_offset] ; Current relative offset
+    sub rax, __get_relocation_offset       ; Substract the absolute address, to get offset
+ret
+
+; Get the current value of RSP at the calling point
+; unsigned long __get_rsp(void)
+__get_rsp:
+    mov rax, rsp
+    sub rax, 8     ; No need for the return address
+ret
 
 ; void __gdt_setup_64(uint16_t seglimit, unsigned long base)
 ; seglimit : di
@@ -38,9 +47,9 @@ ret
 ; Load 64 bit Task State Register, from the GDT
 ; void __tss_setup_64(uint16_t tss_selector);
 __tss_setup_64:
+    xchg bx, bx
     mov [rel tss_selector_64], di
     lea rax, [rel tss_selector_64]
-    mov [rax], di
     ltr [rax]
 ret
 
