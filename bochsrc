@@ -1,5 +1,5 @@
 # Use a modern CPU model with virtualization
-cpu: model=corei7_ivy_bridge_3770k, ips=120000000
+cpu: model=corei7_ivy_bridge_3770k, ips=120000000, reset_on_triple_fault=0
 clock: sync=slowdown
 megs: 128
 
@@ -8,6 +8,7 @@ display_library: x, options="gui_debug"
 
 # Break on xchg bx, bx instruction
 magic_break: enabled=1
+
 
 # Hard disks.
 ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
