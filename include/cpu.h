@@ -187,6 +187,13 @@ struct __packed GDTEntry
     uint32_t flags;
 };
 
+struct __packed TSSEntry
+{
+    struct GDTEntry entry;
+    uint32_t        base_32_63;
+    uint32_t        reserved0;
+};
+
 /* Interrupt/trap gate descriptor entry */
 struct __packed IDT64Entry 
 {

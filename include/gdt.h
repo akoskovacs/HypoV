@@ -41,10 +41,11 @@
 #define GDT_HV_CODE64  1
 #define GDT_HV_DATA64  2
 #define GDT_HV_IDT64   3
-#define GDT_HV_TSS64   4
+#define GDT_HV_TSS64   3
 
 #define TSS_BUSY        0xB00
 #define TSS_AVAILABLE   0x900
+#define TSS_GRANULAR    (1 << 23)
 
 #define GDT_SEL(gdt_idx)    ((gdt_idx) * GDT_SZ_ENTRY)
 

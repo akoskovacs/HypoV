@@ -7,6 +7,7 @@
 #include <gdt.h>
 
 global hv_entry_64
+global hv_stack_64
 extern hv_start
 extern os_error_stub
 
@@ -18,18 +19,12 @@ hv_entry_64:
     ; Operating systems usually clear the RDI register
     cmp rdi, 0
     je os_error_stub
-    ; Load up the 64 bit Task State Segment
-    ;ltr [rel tss_selector]
     call hv_start
 ; Should be unreachable
 .halt:
     hlt
     jmp .halt
 
-section .rodata
-align 8
-tss_selector:
-    dw GDT_SEL(GDT_SYS_TSS64)
-
+; Final stack for supervisor and interrupt contexts
 section .bss
 hv_stack_64: resb CONFIG_SZ_HV_STACK

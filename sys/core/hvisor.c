@@ -44,7 +44,7 @@ void hv_start(uint32_t arg)
         }
         j++;
     }
-    //cpu_init_tables();
+    cpu_init_tables();
     
     while (1) {
         halt();

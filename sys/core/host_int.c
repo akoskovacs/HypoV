@@ -18,6 +18,7 @@ inline void idt64_make_entry(struct IDT64Entry *ent, bool is_trap, uint16_t seg,
     ent->offset_32_63 = (uint32_t)(intr_addr >> 32) & 0xFFFFFFFF;
     ent->segment_sel  = seg;
     ent->flags        = IDT_PRESENT | (is_trap ? IDT_TYPE_TRAP : IDT_TYPE_INT);
+    ent->reserved0    = 0;
 }
 
 void int_handler(void)
