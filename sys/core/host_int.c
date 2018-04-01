@@ -13,12 +13,6 @@
 inline void idt64_make_entry(struct IDT64Entry *ent, bool is_trap, uint16_t seg, hv_int_handler_ft handler)
 {
     unsigned long intr_addr = (unsigned long)handler;
-    /* Point to the auto-generated interrupt handler subroutine */
-#if 0
-    ent->offset_0_15  = intr_addr & 0xFFFFU;
-    ent->offset_16_31 = (intr_addr & 0x0000FFFFU) << 16;
-    ent->offset_32_63 = (intr_addr & 0x00000000FFFFFFFFU) << 32;
-#endif
     ent->offset_0_15  = (uint16_t)intr_addr & 0xFFFF;
     ent->offset_16_31 = (uint16_t)(intr_addr >> 16) & 0xFFFF;
     ent->offset_32_63 = (uint32_t)(intr_addr >> 32) & 0xFFFFFFFF;
