@@ -11,3 +11,9 @@ hvobj-y += hvisor.o
 hvobj-y += elf_os_stub.o
 hvobj-y += host_cpu.o
 hvobj-y += host_cpu_ll.o
+hvobj-y += host_int.o
+hvobj-y += int_wrappers.o
+hvobj-y += int_handler.o
+
+sys/core/int_wrappers.asm: 
+	$(Q)$(RUBY) scripts/intgen.rb $@

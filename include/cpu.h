@@ -1,6 +1,6 @@
 /*
  * +------------------------------------------------------------+
- * | Copyright (C) Ákos Kovács - 2017                           |
+ * | Copyright (C) Ákos Kovács - 2018                           |
  * |                                                            |
  * | CPU type and feature detection                             |
  * +------------------------------------------------------------+
@@ -187,6 +187,25 @@ struct __packed GDTEntry
     uint32_t flags;
 };
 
+/* Interrupt/trap gate descriptor entry */
+struct __packed IDT64Entry 
+{
+    uint16_t offset_0_15;
+    uint16_t segment_sel;
+    uint16_t flags;
+    uint16_t offset_16_31;
+    uint32_t offset_32_63;
+    uint32_t reserved0;
+};
+typedef void (*hv_int_handler_ft)(void);
+
+#define NR_HV_INTERRUPTS 256
+#define IDT_PRESENT      (1 << 15)
+#define IDT_DPL_SHIFT    13
+#define IDT_DPL_MASK     0x6000
+#define IDT_TYPE_INT     0xE00
+#define IDT_TYPE_TRAP    0xF00
+
 struct __packed TSS16
 {
     uint16_t tss_link;
@@ -316,8 +335,9 @@ int             cpu_tables_init(void);
 struct CpuInfo *cpu_get_info(void);
 int             cpu_set_info(struct CpuInfo *info);
 int             cpu_init_long_mode(struct SystemInfo *info);
+void            idt64_make_entry(struct IDT64Entry *ent, bool is_trap, uint16_t seg, hv_int_handler_ft handler);
 
-static inline int 
+static inline void 
 gdt_make_entry(struct GDTEntry *ent, uint32_t base, uint32_t limit, uint32_t flags)
 {
     /* The base and limit cannot fit into these members alone,
@@ -327,7 +347,6 @@ gdt_make_entry(struct GDTEntry *ent, uint32_t base, uint32_t limit, uint32_t fla
     /* The flags member also contains base[31:24] = flags[31:24], base[23:16] = flags[7:0]
        and limit[19:16] = flags[19:16] */
     ent->flags     = (uint32_t)(flags | (base & 0xFF000000U) | ((base & 0x00FF0000U) >> 16) | (limit & 0xF0000U));
-    return 0;
 }
 
 #endif // CPU_H

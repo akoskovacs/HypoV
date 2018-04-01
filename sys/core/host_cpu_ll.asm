@@ -1,5 +1,5 @@
 ; +---------------------------------------------------------------------+
-; | Copyright (C) Kovács Ákos - 2017                                    |
+; | Copyright (C) Kovács Ákos - 2018                                    |
 ; |                                                                     |
 ; | Low-level host CPU utility assembly functions                       |
 ; +---------------------------------------------------------------------+
@@ -22,6 +22,7 @@ interrupt_handler:
 ; seglimit : di
 ; base : rsi
 __gdt_setup_64:
+    xchg bx, bx
     mov [rel gdt_segment_limit], di
     mov [rel gdt_segment_base], rsi
     lgdt [rel gdt_segment_limit]
@@ -34,7 +35,7 @@ __gdt_setup_64:
     mov gs, ax
 ret
 
-; Load 32 bit Task State Register, from the GDT
+; Load 64 bit Task State Register, from the GDT
 ; void __tss_setup_64(uint16_t tss_selector);
 __tss_setup_64:
     mov [rel tss_selector_64], di
@@ -43,7 +44,12 @@ __tss_setup_64:
     ltr [rax]
 ret
 
+; void __idt_setup_64(uint16_t idt_limit, uint64_t base)
 __idt_setup_64:
+    xchg bx, bx
+    mov [rel idt_selector], di
+    mov [rel idt_segment_base], rsi
+    lidt [rel idt_selector]
 ret
 
 section .data
@@ -58,3 +64,9 @@ align 8
 ; TSS selector in the GDT
 tss_selector_64:
     dw 0x0
+
+align 8
+idt_selector:
+    dw 0x0
+idt_segment_base:
+    dq 0x0
