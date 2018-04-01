@@ -374,6 +374,7 @@ hypov-all	:= $(hypov-objs) $(hypov-libs) $(hvcore-objs)
 
 HVCORE_DIR    := sys/core
 HVCORE_TARGET := hvcore.elf64
+HVCORE_LIB64  := $(libs64-y)/lib.a
 HVCORE_ELF64  := $(HVCORE_DIR)/$(HVCORE_TARGET)	   # The main 64 bit hypervisor ELF
 HVCORE_XZ     := $(HVCORE_DIR)/$(HVCORE_TARGET).xz # compressed image of the object
 HVCORE_OBJ	  := $(HVCORE_DIR)/$(HVCORE_TARGET).o  # 32bit ELF binary container object
@@ -387,7 +388,7 @@ quiet_cmd_hypov = LD      $@
 # Link the core ELF64
 quiet_cmd_hvcore = LD      $@
       cmd_hvcore = $(CC)  -Wl,-ehv_entry_64 $(LDFLAGS) -o $(HVCORE_DIR)/$(HVCORE_TARGET) \
-	  -Wl,-T $(HVCORE_DIR)/hvcore.lds -Wl,--start-group $(libs64-y)/lib.a $(hvcore-objs) $(SHARED_FLAGS) -Wl,--end-group -ggdb
+	  -Wl,-T $(HVCORE_DIR)/hvcore.lds -Wl,--start-group $(HVCORE_LIB64) $(hvcore-objs) $(SHARED_FLAGS) -Wl,--end-group -ggdb
 
 # Compress the target ELF64 with XZ
 quiet_cmd_hvcore_xz = XZ      $@
@@ -402,13 +403,22 @@ quiet_cmd_hvobj  = OBJCOPY $@
 	  --redefine-sym _binary_sys_core_hvcore_elf64_xz_size=__hvcore_size \
 	  --binary-architecture i386 $(HVCORE_XZ) $(HVCORE_OBJ)
 
-hypov: $(hypov-all)
+# Create hvcore.elf64
+$(HVCORE_ELF64): $(HVCORE_LIB64) $(hvcore-objs)
 	$(call if_changed,hvcore)
+
+# Compress into hvcore.elf64.xz
+$(HVCORE_XZ): $(HVCORE_ELF64)
 	$(call if_changed,hvcore_xz)
+
+# Bundle the image into hvcore.elf64.o
+$(HVCORE_OBJ): $(HVCORE_XZ)
 	$(call if_changed,hvobj)
+
+hypov: $(hypov-all) $(HVCORE_OBJ)
 	$(call if_changed,hypov)
-	@echo -n "  [Multiboot "
-	$(Q)$(CHECK_MBOOT) $@.bin && echo "OK]" || echo "FAIL]"
+	@echo -n "  LOADER  "
+	$(Q)$(CHECK_MBOOT) $@.bin && echo "OK" || echo "FAIL"
 
 qemu: hypov
 	$(Q)$(QEMU64) -kernel $(BINARY_TARGET)
