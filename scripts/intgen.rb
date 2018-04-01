@@ -29,6 +29,7 @@ File.open file_name, 'w' do |iw|
         sub_name = "#{INT_WRAPPER}#{inum}"
         iw.puts "global #{sub_name}"
         iw.puts "#{sub_name}:"
+        iw.puts "#{SPACES}push 0x0"
         # Push the current interrupt's number
         iw.puts "#{SPACES}push #{inum}"
         iw.puts "#{SPACES}call #{INT_HANDLER}\n\n"
