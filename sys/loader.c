@@ -1,6 +1,6 @@
 /*
  * +------------------------------------------------------------+
- * | Copyright (C) Ákos Kovács - 2017                           |
+ * | Copyright (C) Ákos Kovács - 2018                           |
  * |                                                            |
  * | Hypervisor ELF loader, used to load the final 64bit ELF64  |
  * | code to the memory. The resulting image have to be free of |
@@ -168,14 +168,12 @@ int ld_deflate_hvcore(struct MemoryMap *hvmap, int *error, void **elf_start)
     /* These constants come from the linker when the compressed image
        is embedded into the linked object file (by the build system, via objcopy) */
     unsigned char *im_start = (void *)&__hvcore_start;
-    unsigned char *im_end   = (void *)&__hvcore_end;
-    int im_size             = (int *)&__hvcore_size;
+    int  im_size            = (int)&__hvcore_size;
 
-    uint32_t load_addr      = 0x0;
     int sz_deflated         = 0;
     int xz_ret;
 
-    if (hvmap == NULL || hvmap->mm_start == 0x0) {
+    if (hvmap == NULL || hvmap->mm_start == 0x0 || elf_start == NULL) {
         return -HV_BADARG;
     }
 
