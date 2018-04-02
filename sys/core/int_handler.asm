@@ -26,7 +26,8 @@ __int_handler:
     push rbx
     push rax
 
-    mov rsp, rdi
+; Make the trapframe the first argument
+    mov rdi, rsp
     call int_handler
 
 ; Clean-up the interrupt stack
@@ -46,4 +47,4 @@ __int_handler:
     pop r14
     pop r15
     add rsp, 16
-iret
+iretq

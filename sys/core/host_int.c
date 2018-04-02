@@ -21,16 +21,22 @@ inline void idt64_make_entry(struct IDT64Entry *ent, bool is_trap, uint16_t seg,
     ent->reserved0    = 0;
 }
 
+static char msg[] = "Got an interrupt!!!";
+static volatile console_font_t *videoram = PC_VIDEORAM_BASE_ADDRESS;
+static int i = 0;
+static int j = 0;
+
 void int_handler(void)
 {
-    static int i = 0;
-    static int j = 0;
     console_font_t font = BG_COLOR_CYAN | FG_COLOR_WHITE | LIGHT;
-    volatile console_font_t *videoram = PC_VIDEORAM_BASE_ADDRESS;
-    char msg[] = "Got an interrupt!!!";
+    i = 0;
     char *int_msg = msg;
     while (*int_msg) {
         videoram[(j * CONFIG_CONSOLE_WIDTH) + (i++)] = *int_msg++ | (font << 8);
     }
-    j++;
+    if (j >= 24) {
+        j = 0;
+    } else {
+        j++;
+    }
 }

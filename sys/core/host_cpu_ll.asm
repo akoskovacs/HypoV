@@ -31,7 +31,7 @@ ret
 ; seglimit : di
 ; base : rsi
 __gdt_setup_64:
-    xchg bx, bx
+;    xchg bx, bx
     mov [rel gdt_segment_limit], di
     mov [rel gdt_segment_base], rsi
     lgdt [rel gdt_segment_limit]
@@ -47,7 +47,7 @@ ret
 ; Load 64 bit Task State Register, from the GDT
 ; void __tss_setup_64(uint16_t tss_selector);
 __tss_setup_64:
-    xchg bx, bx
+;    xchg bx, bx
     mov [rel tss_selector_64], di
     lea rax, [rel tss_selector_64]
     ltr [rax]
@@ -55,10 +55,10 @@ ret
 
 ; void __idt_setup_64(uint16_t idt_limit, uint64_t base)
 __idt_setup_64:
-    xchg bx, bx
     mov [rel idt_selector], di
     mov [rel idt_segment_base], rsi
     lidt [rel idt_selector]
+    xchg bx, bx
 ret
 
 section .data

@@ -51,7 +51,7 @@ static void cpu_gdt_init(void)
     __tss_setup_64(GDT_SEL(GDT_HV_TSS64));
 }
 
-/* 
+/*
  * Setup the full interrupt descriptor table for all the final interrupt handlers.
  * The IDT pointer points to the relocated, automatically generated assembly wrappers.
  */
@@ -61,7 +61,7 @@ static void cpu_idt_init(void)
        current relocation offset must be added to it! */
     unsigned long rel_off = __get_relocation_offset();
     for (int i = 0; i < NR_HV_INTERRUPTS; i++) {
-        idt64_make_entry(idt_table + i, true, GDT_SEL(GDT_HV_CODE64), rel_off + __int_vector[i]);
+        idt64_make_entry(idt_table + i, false, GDT_SEL(GDT_HV_CODE64), rel_off + __int_vector[i]);
     }
 
     __idt_setup_64(sizeof(idt_table) - 1, (unsigned long)&idt_table);

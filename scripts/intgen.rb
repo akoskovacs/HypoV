@@ -11,6 +11,9 @@ INT_WRAPPER    = '__int_handle_'
 SPACES         = " " * 4
 FILE_NAME      = "../sys/core/int_wrappers.asm"
 
+# List of interrupts with error codes
+INT_ECODES     = [8, 10, 11, 12, 13, 14, 17]
+
 file_name = FILE_NAME
 if ARGV.count > 0
     file_name = ARGV[0]
@@ -29,10 +32,10 @@ File.open file_name, 'w' do |iw|
         sub_name = "#{INT_WRAPPER}#{inum}"
         iw.puts "global #{sub_name}"
         iw.puts "#{sub_name}:"
-        iw.puts "#{SPACES}push 0x0"
+        iw.puts "#{SPACES}push 0x0" unless INT_ECODES.include?(inum)
         # Push the current interrupt's number
         iw.puts "#{SPACES}push #{inum}"
-        iw.puts "#{SPACES}call #{INT_HANDLER}\n\n"
+        iw.puts "#{SPACES}jmp #{INT_HANDLER}\n\n"
     end
 
     # Generate the full table (vector) of the interrupt handlers from above
