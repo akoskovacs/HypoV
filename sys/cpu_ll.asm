@@ -55,10 +55,10 @@ __cpu_call_64:
     ; Use the new 64 bit segments
     mov eax, GDT_SEL(GDT_SYS_DATA64)
     mov ss, ax
-    mov ds, eax
-    mov es, eax
-    mov fs, eax
-    mov gs, eax
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
     ; Self-modifying machine code to jump directly to the
     ; desired 64bit code.
     db 0xEA ; jmp far cs:whatever

@@ -73,5 +73,4 @@ void cpu_init_tables(void)
     cpu_idt_init();
 
     int_enable();
-    for (;;);
 }

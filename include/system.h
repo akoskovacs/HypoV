@@ -25,6 +25,8 @@ enum CPUID_REGISTERS {
 void sys_reboot(void);
 void sys_chainload(void) __noreturn;
 
+void pic_disable(void);
+
 int cpuid_get_branding(char branding[49]);
 int cpuid_get_vendor(char vendor[13]);
 

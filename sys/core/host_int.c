@@ -21,7 +21,7 @@ inline void idt64_make_entry(struct IDT64Entry *ent, bool is_trap, uint16_t seg,
     ent->reserved0    = 0;
 }
 
-static char msg[] = "Got an interrupt!!!";
+static char msg[] = "Got an interrupt!!!                          ";
 static volatile console_font_t *videoram = PC_VIDEORAM_BASE_ADDRESS;
 static int i = 0;
 static int j = 0;
