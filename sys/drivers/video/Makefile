@@ -1,1 +1,0 @@
-obj-y += pc_console.o

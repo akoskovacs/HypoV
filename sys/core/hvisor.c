@@ -7,16 +7,18 @@
  * +------------------------------------------------------------+
 */
 #include <drivers/video/pc_console.h>
+#include <print.h>
 #include <system.h>
 
 extern void os_error_stub(void); 
 static int out_times;
 void cpu_init_tables(void);
 
+static struct ConsoleDisplay main_display;
+
 void hv_start(uint32_t arg)
 {
-    const char *message = "Welcome in 64 bit land :D :D :D";
-    const char *hello = message;
+    struct CharacterDisplay *display = (struct CharacterDisplay *)&main_display;
     out_times = 10;
 
     /* No arguments, we must be executed from an OS, hopefully Linux :D */
@@ -27,24 +29,15 @@ void hv_start(uint32_t arg)
     } 
 #endif
 
-    console_font_t font = BG_COLOR_CYAN | FG_COLOR_WHITE | LIGHT;
-    volatile console_font_t *videoram = PC_VIDEORAM_BASE_ADDRESS;
-    /* Clear screen without 32bit code */
-    for (int i = 0; i < CONFIG_CONSOLE_WIDTH * CONFIG_CONSOLE_HEIGHT; i++) {
-       videoram[i] = 0 | (font << 8);
-    }
-
-    int i, j;
-    i = j = 0;
-    while (j < out_times) {
-        hello = message;
-        i = 0;
-        while (*hello) {
-            videoram[(j * CONFIG_CONSOLE_WIDTH) + (i++)] = *hello++ | (font << 8);
-        }
-        j++;
-    }
     cpu_init_tables();
+    hv_console_display_init(&main_display);
+    hv_set_stdout(&main_display);
+
+    int i;
+    while (i < out_times) {
+        hv_printf(display, "64 bit hypervisor startup...");
+        i++;
+    }
     
     while (1) {
         halt();
