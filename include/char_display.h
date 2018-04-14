@@ -34,7 +34,7 @@ struct CharacterDisplay {
     hv_disp_putc_ft    disp_putc;
 };
 
-extern struct CharacterDisplay *stdout;
+extern struct CharacterDisplay *hv_stdout;
 
 /* Top-level functions */
 int hv_disp_setup(struct CharacterDisplay *this);
@@ -50,6 +50,6 @@ int hv_disp_puts(struct CharacterDisplay *this, const char *line);
 #define puts(str)           hv_disp_puts(stdout, (str))
 #define fputc(ch, disp)     hv_disp_putc((disp), (ch))
 #define fputs(str, disp)    hv_disp_puts((disp), (str))
-#define hv_set_stdout(disp) (stdout = (struct CharacterDisplay *)(disp))
+#define hv_set_stdout(disp) (hv_stdout = (struct CharacterDisplay *)(disp))
 
 #endif // CHAR_DISPLAY_H

@@ -9,7 +9,7 @@
 #include <string.h>
 #include <char_display.h>
 
-struct CharacterDisplay *stdout = NULL;
+struct CharacterDisplay *hv_stdout = NULL;
 
 #define CDISP_CHECK_THIS(this)       \
     if ((this == NULL)) {            \
