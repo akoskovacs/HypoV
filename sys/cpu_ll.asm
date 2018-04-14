@@ -22,7 +22,9 @@ bits 32
 __cpu_long_mode_enter:
 ;   xchg bx, bx         ; Bochs breakpoint, if needed
     mov eax, cr0        ; Read CR0
-    bts eax, CR0_PG_BIT ; Set PG bit
+    bts eax, CR0_PG_BIT ; Set Paging bit
+    bts eax, CR0_MP_BIT ; Set MP bit
+    btr eax, CR0_EM_BIT ; Clear EM bit
     mov cr0, eax
     jmp .arch64         ; Should be in 64bit compatiblity mode
 .arch64:                ; an immidiate branch is needed by the spec

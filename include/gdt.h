@@ -60,6 +60,16 @@
 
 #define GDT_IDT64_FLAGS 0x0
 
+#define CR0_PE_BIT 0
+#define CR0_MP_BIT 1
+#define CR0_EM_BIT 2
+#define CR0_TS_BIT 3
+#define CR0_ET_BIT 4
+#define CR0_NE_BIT 5
+#define CR0_WP_BIT 16 
+#define CR0_AM_BIT 18
+#define CR0_NW_BIT 29
+#define CR0_CD_BIT 30
 #define CR0_PG_BIT 31
 
 #endif // GDT_H

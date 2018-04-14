@@ -294,7 +294,7 @@ int mm_init_paging(struct SystemInfo *info)
      */
 
     /* Set up Physical Address Extensions */
-    uint32_t cr4 = cr4_read() | CR4_PAE;
+    uint32_t cr4 = cr4_read() | CR4_PAE | CR4_OSXMMEXCPT | CR4_OSFXSR;
     cr4_write(cr4);
 
     /* Mr. Processor, please use our new page tables... */
