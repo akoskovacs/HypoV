@@ -9,8 +9,8 @@ MAKEFLAGS += -rR --no-print-directory
 
 # Shared C flags across 32bit and 64bit 
 SHARED_FLAGS := -std=c99 -nostdinc -fno-builtin -fno-stack-protector -fno-unwind-tables
-SHARED_FLAGS += -fno-asynchronous-unwind-tables -ffreestanding -mno-sse4
-SHARED_FLAGS += -nostartfiles -nodefaultlibs -nostdlib -static -mno-80387 -mno-fp-ret-in-387 -ggdb
+SHARED_FLAGS += -fno-asynchronous-unwind-tables -ffreestanding -mno-sse -mno-avx
+SHARED_FLAGS += -nostartfiles -nodefaultlibs -nostdlib -static -mno-80387 -mno-fp-ret-in-387 -ggdb 
 
 BINARY_TARGET := hypov.bin
 TESTFS 		  := testfs.img
@@ -422,16 +422,16 @@ hypov: $(hypov-all) $(HVCORE_OBJ)
 	$(Q)$(CHECK_MBOOT) $@.bin && echo "OK" || echo "FAIL"
 
 qemu: hypov
-	$(Q)$(QEMU64) -kernel $(BINARY_TARGET)
+	$(Q)$(QEMU64) -serial stdio -kernel $(BINARY_TARGET)
 
 qemufs: hypov
-	$(Q)$(QEMU64) -hda testfs.img
+	$(Q)$(QEMU64) -serial stdio -hda testfs.img
 
 qemuiso: hypov.iso
-	$(Q)$(QEMU64) -cdrom $^
+	$(Q)$(QEMU64) -serial stdio -cdrom $^
 
 qemudbg: hypov.iso
-	$(Q)$(QEMU64) -cdrom $^ -S -s
+	$(Q)$(QEMU64) -serial stdio -cdrom $^ -S -s
 	#$(Q)$(QEMU64) -kernel $(BINARY_TARGET) -S -s
 
 bochs: hypov

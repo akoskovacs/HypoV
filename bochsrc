@@ -9,6 +9,11 @@ display_library: x, options="gui_debug"
 # Break on xchg bx, bx instruction
 magic_break: enabled=1
 
+# Debug serial console
+com1: enabled=1, mode=file, dev=debug_serial.txt
+
+# Debug symbols
+#debug_symbols: file=sys/core/hvcore.sym, offset=0x5FF0000
 
 # Hard disks.
 ata0: enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
