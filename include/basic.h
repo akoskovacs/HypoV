@@ -66,7 +66,7 @@ typedef __builtin_va_list va_list;
 #define forever while(1)
 
 #define typeof __typeof__
-#define __CHECKED__
+//#define __CHECKER__
 
 /* Helper macros from Linux v4.5 include/linux/compiler.h */
 #define ___PASTE(a,b) a##b
@@ -79,11 +79,11 @@ typedef __builtin_va_list va_list;
 # define unlikely(x)	(__builtin_constant_p(x) ? !!(x) : __branch_check__(x, 0))
 #endif
 
-#ifdef __CHECKED__
+#ifdef __CHECKER__
 # define __force	__attribute__((force))
-#else //__CHECKED__
+#else //__CHECKER__
 # define __force
-#endif // __CHECKED__
+#endif // __CHECKER__
 
 /* Not-quite-unique ID. */
 #ifndef __UNIQUE_ID
