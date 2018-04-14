@@ -43,13 +43,3 @@ int cpuid_get_vendor(char vendor[13])
     vendor[12] = '\0';
     return 0;
 }
-
-/*
- * Disable i8259 Programmable Interrupt Controller. 
- * We will use APIC/x2APIC instead. 
-*/
-void pic_disable(void)
-{
-    outb(0xA0, 0xFF);
-    outb(0x21, 0xFF);
-}

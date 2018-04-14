@@ -18,14 +18,12 @@ enum CPUID_REGISTERS {
     CPUID_REG_EDX
 };
 
-/* 
+/*
  * Implemented by the keyboard driver, because on PCs the keyboard
  * controller is routed to the reset line
 */
 void sys_reboot(void);
 void sys_chainload(void) __noreturn;
-
-void pic_disable(void);
 
 int cpuid_get_branding(char branding[49]);
 int cpuid_get_vendor(char vendor[13]);
@@ -36,7 +34,7 @@ void bochs_breakpoint(void)
     __asm__ __volatile__("xchg %bx, %bx");
 }
 
-/* These helper functions are mostly based on 
+/* These helper functions are mostly based on
    OSDev's inline assembly functions */
 
 static inline
@@ -177,7 +175,7 @@ void msr_write(uint32_t msr, uint64_t value)
 }
 
 /* Instructions for interrupt handling */
-static inline 
+static inline
 void int_enable(void)
 {
     __asm__ __volatile__("sti");
@@ -187,19 +185,6 @@ static inline
 void int_disable(void)
 {
     __asm__ __volatile__("cli");
-}
-
-/* Instructions for Virtual Machine Extensions */
-static inline
-void vmxon(void *vmcs)
-{
-    __asm__ __volatile__("vmxon %0" : : "m" (vmcs));
-}
-
-static inline
-void vmxoff(void)
-{
-    __asm__ __volatile__("vmxoff");
 }
 
 /* Invalidate the Translation Lookaside Buffer in uniprocessor mode */
@@ -213,6 +198,17 @@ static inline
 void halt(void)
 {
     __asm__ __volatile__("hlt");
+}
+
+/*
+ * Disable i8259 Programmable Interrupt Controller.
+ * We will use APIC/x2APIC instead.
+*/
+static inline
+void pic_disable(void)
+{
+    outb(0xA0, 0xFF);
+    outb(0x21, 0xFF);
 }
 
 #endif // SYSTEM_H
