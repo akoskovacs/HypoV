@@ -4,12 +4,16 @@
 ; | Global assembly interrupt handler. Called by all auto-generated     |
 ; | trap handlers from assembly, with their respective number in stack. |
 ; +---------------------------------------------------------------------+
+[bits 64]
 global __int_handler
-extern int_handler
+extern hv_handle_interrupt
 
 section .text
 ; Set-up trapframe
 __int_handler:
+    ;Debug guard
+    ;xchg bx, bx
+    ;push 0x4242424242
     push r15
     push r14
     push r13
@@ -28,7 +32,7 @@ __int_handler:
 
 ; Make the trapframe the first argument
     mov rdi, rsp
-    call int_handler
+    call hv_handle_interrupt
 
 ; Clean-up the interrupt stack
     pop rax

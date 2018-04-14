@@ -9,6 +9,7 @@
 #include <cpu.h>
 #include <string.h>
 #include <system.h>
+#include <interrupt.h>
 
 /* Helper subroutines from host_cpu_ll.asm */
 extern unsigned long __get_relocation_offset(void);
@@ -42,8 +43,8 @@ static void cpu_gdt_init(void)
 
     /* Set up the final Global Descriptor Table */
     gdt_make_entry(gdt_table + GDT_HV_NULL, 0x0, 0x0, 0x0);
-    gdt_make_entry(gdt_table + GDT_HV_CODE64, 0x0, GDT_LIMIT_MAX32, GDT_CODE64_FLAGS);
-    gdt_make_entry(gdt_table + GDT_HV_DATA64, 0x0, GDT_LIMIT_MAX32, GDT_DATA64_FLAGS);
+    gdt_make_entry(gdt_table + GDT_HV_CODE64, 0x0, 0x0, GDT_CODE64_FLAGS);
+    gdt_make_entry(gdt_table + GDT_HV_DATA64, 0x0, 0x0, GDT_DATA64_FLAGS);
     /* The size of the 64bit TSS entry is twice the size of the legacy ones (needs two entries) */
     gdt_make_tss_entry(gdt_table + GDT_HV_TSS64, (uint64_t)&tss_sys_64
         , sizeof(tss_sys_64), DESC_PRESENT | TSS_AVAILABLE);
@@ -61,7 +62,7 @@ static void cpu_idt_init(void)
        current relocation offset must be added to it! */
     unsigned long rel_off = __get_relocation_offset();
     for (int i = 0; i < NR_HV_INTERRUPTS; i++) {
-        idt64_make_entry(idt_table + i, false, GDT_SEL(GDT_HV_CODE64), rel_off + __int_vector[i]);
+        idt64_make_entry(idt_table + i, true, GDT_SEL(GDT_HV_CODE64), rel_off + __int_vector[i]);
     }
 
     __idt_setup_64(sizeof(idt_table) - 1, (unsigned long)&idt_table);
@@ -71,6 +72,4 @@ void cpu_init_tables(void)
 {
     cpu_gdt_init();
     cpu_idt_init();
-
-    int_enable();
 }
