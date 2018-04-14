@@ -194,25 +194,6 @@ struct __packed TSSEntry
     uint32_t        reserved0;
 };
 
-/* Interrupt/trap gate descriptor entry */
-struct __packed IDT64Entry 
-{
-    uint16_t offset_0_15;
-    uint16_t segment_sel;
-    uint16_t flags;
-    uint16_t offset_16_31;
-    uint32_t offset_32_63;
-    uint32_t reserved0;
-};
-typedef void (*hv_int_handler_ft)(void);
-
-#define NR_HV_INTERRUPTS 256
-#define IDT_PRESENT      (1 << 15)
-#define IDT_DPL_SHIFT    13
-#define IDT_DPL_MASK     0x6000
-#define IDT_TYPE_INT     0xE00
-#define IDT_TYPE_TRAP    0xF00
-
 struct __packed TSS16
 {
     uint16_t tss_link;
@@ -342,7 +323,6 @@ int             cpu_tables_init(void);
 struct CpuInfo *cpu_get_info(void);
 int             cpu_set_info(struct CpuInfo *info);
 int             cpu_init_long_mode(struct SystemInfo *info);
-void            idt64_make_entry(struct IDT64Entry *ent, bool is_trap, uint16_t seg, hv_int_handler_ft handler);
 
 static inline void 
 gdt_make_entry(struct GDTEntry *ent, uint32_t base, uint32_t limit, uint32_t flags)
