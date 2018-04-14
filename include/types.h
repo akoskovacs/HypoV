@@ -35,8 +35,6 @@
 #define INT64_MAX		((int64_t)(UINT64_MAX>>1))
 #define INT64_MIN		((int64_t)(-INT64_MAX - 1))
 
-#define __i386__ 1
-
 #ifdef __HVISOR__
 #if defined(__i386__)
     typedef unsigned long size_t;
@@ -75,7 +73,7 @@
     typedef signed short int int16_be_t;
     typedef signed int int32_be_t;
     typedef signed long long int64_be_t;
-#elif defined()
+#elif defined(__x86_64__)
     typedef unsigned long size_t;
     typedef unsigned long long off_t;
 

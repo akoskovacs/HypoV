@@ -126,7 +126,7 @@ int cpu_tables_init(void)
     gdt_make_entry(gdt_table + GDT_SYS_TSS64, (uint32_t)&tss_sys_64, sizeof(tss_sys_64), DESC_PRESENT | TSS_AVAILABLE);
     gdt_make_entry(gdt_table + GDT_SYS_TSS64 + 1, 0x0, 0x0, 0x0);
 
-    __gdt_setup_32(GDT_NR_ENTRIES * sizeof(gdt_table[0]), (unsigned long)&gdt_table);
+    __gdt_setup_32(sizeof(gdt_table) - 1, (unsigned long)&gdt_table);
     __tss_setup_32(GDT_SEL(GDT_SYS_TSS32));
     return 0; 
 }
