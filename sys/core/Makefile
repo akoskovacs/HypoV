@@ -14,6 +14,7 @@ hvobj-y += host_cpu_ll.o
 hvobj-y += host_int.o
 hvobj-y += int_wrappers.o
 hvobj-y += int_handler.o
+hvobj-y += drivers/
 
 sys/core/int_wrappers.asm: 
 	$(Q)$(RUBY) scripts/intgen.rb $@
