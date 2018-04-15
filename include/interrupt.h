@@ -62,3 +62,7 @@ typedef void (*hv_int_handler_ft)(void);
 
 void idt64_make_entry(struct IDT64Entry *ent, bool is_trap, uint16_t seg, hv_int_handler_ft handler);
 void hv_handle_interrupt(struct TrapFrame *frame);
+
+int pic_init(int offset1, int offset2);
+void pic_send_eoi(uint8_t irq);
+void pic_disable(void);
