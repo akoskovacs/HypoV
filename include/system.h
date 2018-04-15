@@ -37,6 +37,14 @@ void bochs_breakpoint(void)
 /* These helper functions are mostly based on
    OSDev's inline assembly functions */
 
+static inline void io_wait(void)
+{
+    /*  Port 0x80 is used for 'checkpoints' during POST. */
+    /*  The Linux kernel seems to think it is free for use :-/ */
+    __asm__ __volatile__( "outb %%al, $0x80" : : "a"(0) );
+        /*  %%al instead of %0 makes no difference.  TODO: does the register need to be zeroed? */
+}
+
 static inline
 void outb(uint16_t port, uint8_t value)
 {
@@ -198,17 +206,6 @@ static inline
 void halt(void)
 {
     __asm__ __volatile__("hlt");
-}
-
-/*
- * Disable i8259 Programmable Interrupt Controller.
- * We will use APIC/x2APIC instead.
-*/
-static inline
-void pic_disable(void)
-{
-    outb(0xA0, 0xFF);
-    outb(0x21, 0xFF);
-}
+} 
 
 #endif // SYSTEM_H
