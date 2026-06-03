@@ -12,15 +12,33 @@
 #include <print.h>
 #include <system.h>
 #include <vmx.h>
+#include <svm.h>
+#include <hv_ops.h>
 
 extern void os_error_stub(void);
 void cpu_init_tables(void);
 
-struct ConsoleDisplay main_display;
+struct ConsoleDisplay  main_display;
 struct CharacterDisplay *display = (struct CharacterDisplay *)&main_display;
-struct CharacterDisplay debug_serial;
+struct CharacterDisplay  debug_serial;
 
-struct VmxState vmx_state;
+extern struct VmxState vmx_state;
+extern struct SvmState svm_state;
+
+const struct HvOperations *hv_detect_backend(void)
+{
+    int32_t regs[4];
+
+    cpuid(0x1, regs);
+    if (regs[CPUID_REG_ECX] & (1 << 5))
+        return &vmx_ops;   /* Intel VT-x */
+
+    cpuid(0x80000001, regs);
+    if (regs[CPUID_REG_ECX] & (1 << 2))
+        return &svm_ops;   /* AMD SVM */
+
+    return NULL;
+}
 
 void hv_start(uint32_t arg)
 {
@@ -37,7 +55,6 @@ void hv_start(uint32_t arg)
 
     hv_serial_init(&debug_serial);
     hv_disp_setup(&debug_serial);
-
     hv_console_display_init(&main_display);
     hv_disp_setup(display);
     hv_set_stdout(display);
@@ -47,50 +64,26 @@ void hv_start(uint32_t arg)
     hv_printf(display, "HypoV 64-bit hypervisor core\n\n");
     hv_printf(&debug_serial, "HypoV hv_start()\n");
 
-    /* Check for VT-x support */
-    if (vmx_check_support() != 0) {
-        hv_printf(display, "Error: VT-x not supported\n");
+    const struct HvOperations *ops = hv_detect_backend();
+    if (!ops) {
+        hv_printf(display, "Error: no hardware virtualization support\n");
+        hv_printf(&debug_serial, "No VMX or SVM found\n");
         goto halt;
     }
 
-    /* Read and print VMX capability MSRs */
-    if (vmx_read_capabilities(&vmx_state.vs_caps) != 0) {
-        hv_printf(display, "Error: failed to read VMX capabilities\n");
-        goto halt;
-    }
-    vmx_print_info(&vmx_state.vs_caps);
+    hv_printf(display, "Backend: %s\n", ops->name);
 
-    if (!vmx_state.vs_caps.vc_unrestricted_guest) {
-        hv_printf(display, "Error: unrestricted guest not supported (required for real-mode boot)\n");
+    if (ops->check_support() != 0)
         goto halt;
-    }
 
-    /* Enter VMX root operation */
-    if (vmx_enable(&vmx_state) != 0) {
-        hv_printf(display, "Error: VMXON failed\n");
+    ops->print_info();
+
+    if (ops->enable() != 0) {
+        hv_printf(display, "Error: backend enable failed\n");
         goto halt;
     }
 
-    /* Build EPT and set the pointer in the VMCS */
-    uint64_t eptp = ept_build();
-    if (!eptp) {
-        hv_printf(display, "Error: EPT build failed\n");
-        goto halt;
-    }
-
-    /* Initialize VMCS with host/guest/control fields */
-    if (vmcs_init(&vmx_state) != 0) {
-        hv_printf(display, "Error: VMCS init failed\n");
-        goto halt;
-    }
-    hv_printf(display, "VMCS initialized\n");
-
-    /* Set EPT pointer now that the VMCS is current */
-    if (vmx_state.vs_caps.vc_ept)
-        vmx_write(VMCS_EPT_POINTER, eptp);
-
-    hv_printf(display, "\nReady to launch guest.\n");
-    hv_printf(&debug_serial, "VMX initialized, ready for VMLAUNCH\n");
+    ops->run_guest();  /* does not return on success */
 
 halt:
     while (1)

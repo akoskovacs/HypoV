@@ -11,9 +11,12 @@
 #include <print.h>
 #include <string.h>
 #include <vmx.h>
+#include <hv_ops.h>
 
 extern struct CharacterDisplay debug_serial;
 extern struct CharacterDisplay *display;
+
+struct VmxState vmx_state;
 
 /* Static 4K-aligned regions — no 32-bit heap allocator available in hvcore */
 static struct VmxonRegion vmxon_region __aligned_4k;
@@ -168,3 +171,24 @@ int vmx_enable(struct VmxState *state)
     hv_printf(display, "VMX: active\n");
     return 0;
 }
+
+/* HvOperations backend for Intel VT-x */
+
+static int  vmx_ops_enable(void)     { return vmx_enable(&vmx_state); }
+static void vmx_ops_print_info(void) { vmx_print_info(&vmx_state.vs_caps); }
+static void vmx_ops_run_guest(void)
+{
+    uint64_t eptp = ept_build();
+    if (eptp && vmx_state.vs_caps.vc_ept)
+        vmx_write(VMCS_EPT_POINTER, eptp);
+    vmcs_init(&vmx_state);
+    vmx_launch();
+}
+
+const struct HvOperations vmx_ops = {
+    .name          = "Intel VT-x",
+    .check_support = vmx_check_support,
+    .print_info    = vmx_ops_print_info,
+    .enable        = vmx_ops_enable,
+    .run_guest     = vmx_ops_run_guest,
+};

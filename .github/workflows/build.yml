@@ -61,33 +61,40 @@ jobs:
         id: kvm
         run: |
           if grep -q vmx /proc/cpuinfo; then
-            echo "Intel VMX detected — enabling nested KVM"
+            echo "Intel VMX — enabling nested kvm_intel"
             sudo modprobe -r kvm_intel 2>/dev/null || true
             echo "options kvm_intel nested=1" | sudo tee /etc/modprobe.d/kvm.conf
             sudo modprobe kvm_intel nested=1
             cat /sys/module/kvm_intel/parameters/nested
-            echo "intel=true" >> $GITHUB_OUTPUT
+            echo "kvm=true" >> $GITHUB_OUTPUT
+          elif grep -q svm /proc/cpuinfo; then
+            echo "AMD SVM — enabling nested kvm_amd"
+            sudo modprobe -r kvm_amd 2>/dev/null || true
+            echo "options kvm_amd nested=1" | sudo tee /etc/modprobe.d/kvm.conf
+            sudo modprobe kvm_amd nested=1
+            cat /sys/module/kvm_amd/parameters/nested
+            echo "kvm=true" >> $GITHUB_OUTPUT
           else
-            echo "No Intel VMX (AMD runner or no KVM) — skipping VMX boot test"
-            echo "intel=false" >> $GITHUB_OUTPUT
+            echo "No KVM support — skipping boot test"
+            echo "kvm=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Install QEMU
-        if: steps.kvm.outputs.intel == 'true'
+        if: steps.kvm.outputs.kvm == 'true'
         run: sudo apt-get install -y --no-install-recommends qemu-system-x86
 
       - name: Download ISO
-        if: steps.kvm.outputs.intel == 'true'
+        if: steps.kvm.outputs.kvm == 'true'
         uses: actions/download-artifact@v4
         with:
           name: hypov-${{ github.sha }}
 
       - name: Grant KVM access
-        if: steps.kvm.outputs.intel == 'true'
+        if: steps.kvm.outputs.kvm == 'true'
         run: sudo chmod 666 /dev/kvm
 
       - name: Boot HypoV and capture serial output
-        if: steps.kvm.outputs.intel == 'true'
+        if: steps.kvm.outputs.kvm == 'true'
         run: |
           timeout 30 qemu-system-x86_64 \
             -enable-kvm -cpu host -m 512 -M q35 \
@@ -98,14 +105,15 @@ jobs:
           echo "=== Serial output ==="
           cat serial.log || echo "(no serial output)"
 
-      - name: Check VMX activated
-        if: steps.kvm.outputs.intel == 'true'
+      - name: Check hypervisor activated
+        if: steps.kvm.outputs.kvm == 'true'
         run: |
           echo "=== Serial log ==="
           cat serial.log
-          grep -q "VMX: active" serial.log && echo "PASS: VMX activated successfully" \
-            || { echo "FAIL: VMX not activated"; exit 1; }
+          grep -qE "VMX: active|SVM: active" serial.log \
+            && echo "PASS: hypervisor activated" \
+            || { echo "FAIL: hypervisor not activated"; exit 1; }
 
-      - name: VMX test skipped
-        if: steps.kvm.outputs.intel != 'true'
-        run: echo "VMX test skipped — Intel KVM not available on this runner (AMD CPU)"
+      - name: Boot test skipped
+        if: steps.kvm.outputs.kvm != 'true'
+        run: echo "Boot test skipped — no KVM on this runner"

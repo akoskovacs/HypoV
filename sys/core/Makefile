@@ -21,6 +21,9 @@ hvobj-y += vmx_ll.o
 hvobj-y += vmcs.o
 hvobj-y += ept.o
 hvobj-y += vmx_exit.o
+hvobj-y += svm.o
+hvobj-y += svm_ll.o
+hvobj-y += npt.o
 hvobj-y += drivers/
 
 sys/core/int_wrappers.asm: 
