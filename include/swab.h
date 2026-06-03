@@ -136,7 +136,7 @@ static __inline__ __const__ uint16_t __fswab16(uint16_t x)
 {
 	return __arch__swab16(x);
 }
-static __inline__ uint16_t __swab16p(uint16_t *x)
+static __inline__ uint16_t __swab16p(const uint16_t *x)
 {
 	return __arch__swab16p(x);
 }
@@ -149,7 +149,7 @@ static __inline__ __const__ uint32_t __fswab32(uint32_t x)
 {
 	return __arch__swab32(x);
 }
-static __inline__ uint32_t __swab32p(uint32_t *x)
+static __inline__ uint32_t __swab32p(const uint32_t *x)
 {
 	return __arch__swab32p(x);
 }
@@ -169,7 +169,7 @@ static __inline__ __const__ uint64_t __fswab64(uint64_t x)
 	return __arch__swab64(x);
 #  endif
 }
-static __inline__ uint64_t __swab64p(uint64_t *x)
+static __inline__ uint64_t __swab64p(const uint64_t *x)
 {
 	return __arch__swab64p(x);
 }

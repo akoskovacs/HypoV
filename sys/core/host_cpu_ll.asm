@@ -84,3 +84,5 @@ idt_selector:
     dw 0x0
 idt_segment_base:
     dq 0x0
+
+section .note.GNU-stack noalloc noexec nowrite progbits

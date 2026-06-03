@@ -148,3 +148,5 @@ gdt_16:
 ; 16 bit data (0x10)
    dw 0xFFFF, 0x0
    db 0x0, 0x92, 0x0, 0x0
+
+section .note.GNU-stack noalloc noexec nowrite progbits

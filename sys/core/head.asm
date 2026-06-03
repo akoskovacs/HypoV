@@ -29,3 +29,5 @@ hv_entry_64:
 ; Final stack for supervisor and interrupt contexts
 section .bss
 hv_stack_64: resb CONFIG_SZ_HV_STACK
+
+section .note.GNU-stack noalloc noexec nowrite progbits

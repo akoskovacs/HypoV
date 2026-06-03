@@ -60,3 +60,5 @@ hv_multiboot_entry:
 
 section .bss
 hv_stack: resb CONFIG_STACK_SIZE
+
+section .note.GNU-stack noalloc noexec nowrite progbits

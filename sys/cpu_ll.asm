@@ -107,3 +107,5 @@ align 8
 ; TSS selector in the GDT
 tss_selector_32:
     dw 0x0
+
+section .note.GNU-stack noalloc noexec nowrite progbits
