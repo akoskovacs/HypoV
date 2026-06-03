@@ -71,12 +71,23 @@ void hv_start(uint32_t arg)
         goto halt;
     }
 
+    /* Build EPT and set the pointer in the VMCS */
+    uint64_t eptp = ept_build();
+    if (!eptp) {
+        hv_printf(display, "Error: EPT build failed\n");
+        goto halt;
+    }
+
     /* Initialize VMCS with host/guest/control fields */
     if (vmcs_init(&vmx_state) != 0) {
         hv_printf(display, "Error: VMCS init failed\n");
         goto halt;
     }
     hv_printf(display, "VMCS initialized\n");
+
+    /* Set EPT pointer now that the VMCS is current */
+    if (vmx_state.vs_caps.vc_ept)
+        vmx_write(VMCS_EPT_POINTER, eptp);
 
     hv_printf(display, "\nReady to launch guest.\n");
     hv_printf(&debug_serial, "VMX initialized, ready for VMLAUNCH\n");

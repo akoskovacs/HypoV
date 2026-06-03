@@ -1,5 +1,5 @@
 ; +---------------------------------------------------------------------+
-; | Copyright (C) Ákos Kovács - 2024                                    |
+; | Copyright (C) Ákos Kovács - 2026                                    |
 ; |                                                                     |
 ; | Low-level VMX instruction wrappers and VM exit trampoline           |
 ; +---------------------------------------------------------------------+
@@ -96,7 +96,7 @@ vmx_resume:
 ;   At entry: RSP = HOST_RSP (from VMCS), all GPRs hold guest values.
 ;   We save guest GPRs, call the C handler, restore them, then VMRESUME.
 ;
-;   The pushed register layout matches struct GuestRegs:
+;   The pushed register layout matches struct GuestRegisters:
 ;     { rax, rbx, rcx, rdx, rbp, rsi, rdi, r8..r15 }
 vmx_exit_trampoline:
     ; Save all guest GPRs (RSP was restored from VMCS HOST_RSP)
