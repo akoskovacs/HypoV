@@ -20,7 +20,7 @@ struct ConsoleDisplay main_display;
 struct CharacterDisplay *display = (struct CharacterDisplay *)&main_display;
 struct CharacterDisplay debug_serial;
 
-static struct VmxState vmx_state;
+struct VmxState vmx_state;
 
 void hv_start(uint32_t arg)
 {
