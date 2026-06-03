@@ -11,22 +11,22 @@ OUTPUT_ARCH(i386:x86-64)
 
 ENTRY(hv_entry_64)
 
-SECTIONS 
+SECTIONS
 {
-    . = 0x1000;
-    .text : ALIGN(2M)
+    . = 16M;
+    .text : ALIGN(4K)
     {
         *(.text)
     }
 
-    .data : ALIGN(2M)
-    {
-        *(.data)
-    }
-
-    .rodata : ALIGN(2M)
+    .rodata : ALIGN(4K)
     {
         *(.rodata)
+    }
+
+    .data : ALIGN(4K)
+    {
+        *(.data)
     }
 
     .note :
@@ -34,7 +34,7 @@ SECTIONS
         *(.note.gnu.build-id)
     }
 
-    .bss : ALIGN(2M)
+    .bss : ALIGN(4K)
     {
         *(.bss)
     }

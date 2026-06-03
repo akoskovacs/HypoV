@@ -52,3 +52,5 @@ __int_handler:
     pop r15
     add rsp, 16
 iretq
+
+section .note.GNU-stack noalloc noexec nowrite progbits

@@ -71,20 +71,21 @@ extern void __cpu_long_mode_enter(void);
 int cpu_init_long_mode(struct SystemInfo *info)
 {
     int error = 0;
-    /* Enable long-mode. 64bit will not be active, until paging is not set up. */
-    uint64_t efer = msr_read(MSR_IA32_EFER) | EFER_LME;
-    msr_write(MSR_IA32_EFER, efer);
-    
+
     /* Don't do anything if we are already in 64bit mode */
-    if (efer & EFER_LMA) {
+    if (msr_read(MSR_IA32_EFER) & EFER_LMA) {
         return -HV_EWONTDO;
     }
 
-    /* Setup all the paging levels needed for now */
+    /* Setup all the paging levels needed for now (must be done before enabling LME+PG) */
     error = mm_init_paging(info);
     if (error != 0) {
         return error;
     }
+
+    /* Enable long-mode. 64bit will not be active until paging is enabled. */
+    uint64_t efer = msr_read(MSR_IA32_EFER) | EFER_LME;
+    msr_write(MSR_IA32_EFER, efer);
 
     __cpu_long_mode_enter();
 

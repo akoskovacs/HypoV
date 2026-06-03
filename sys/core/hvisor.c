@@ -8,6 +8,7 @@
 */
 #include <drivers/video/pc_console.h>
 #include <drivers/comm/serial.h>
+#include <interrupt.h>
 #include <print.h>
 #include <system.h>
 
@@ -31,7 +32,7 @@ void hv_start(uint32_t arg)
 #endif
 
     cpu_init_tables();
-    //pic_disable();
+    pic_init(0x20, 0x28);
     int_enable();
 
     hv_serial_init(&debug_serial);

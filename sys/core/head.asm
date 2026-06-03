@@ -14,6 +14,7 @@ extern os_error_stub
 section .text
 bits 64
 hv_entry_64:
+    cli
     xchg bx, bx ; Bochs
     lea rsp, [rel hv_stack_64+CONFIG_SZ_HV_STACK]
     ; Operating systems usually clear the RDI register
@@ -28,3 +29,5 @@ hv_entry_64:
 ; Final stack for supervisor and interrupt contexts
 section .bss
 hv_stack_64: resb CONFIG_SZ_HV_STACK
+
+section .note.GNU-stack noalloc noexec nowrite progbits

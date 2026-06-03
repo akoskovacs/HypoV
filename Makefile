@@ -117,7 +117,7 @@ HOSTCXX      = g++
 HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer
 HOSTCXXFLAGS = -O2
 
-GRUB_MKRESCUE = grub-mkrescue
+GRUB_MKRESCUE = i686-elf-grub-mkrescue
 
 # Beautify output
 # ---------------------------------------------------------------------------
@@ -172,7 +172,7 @@ include $(srctree)/scripts/Kbuild.include
 AS		= $(CROSS_COMPILE)as
 LD		= $(CROSS_COMPILE)ld
 CC		= $(CROSS_COMPILE)gcc
-YASM    = $(CROSS_COMPILE)yasm
+YASM    = yasm
 CPP		= $(CC) -E
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -387,9 +387,10 @@ quiet_cmd_hypov = LD      $@
 	  -Wl,-T boot/linker.lds $(SHARED_FLAGS) -Wl,-Map $(MAPFILE) -ggdb
 
 # Link the core ELF64
+CC64 = x86_64-elf-gcc
 quiet_cmd_hvcore = LD      $@
-      cmd_hvcore = $(CC)  -Wl,-ehv_entry_64 $(LDFLAGS) -o $(HVCORE_DIR)/$(HVCORE_TARGET) \
-	  -Wl,-T $(HVCORE_DIR)/hvcore.lds -Wl,--start-group $(HVCORE_LIB64) $(hvcore-objs) $(SHARED_FLAGS) -Wl,--end-group -ggdb
+      cmd_hvcore = $(CC64) -Wl,-ehv_entry_64 -nostdlib -o $(HVCORE_DIR)/$(HVCORE_TARGET) \
+	  -Wl,-T $(HVCORE_DIR)/hvcore.lds -Wl,--start-group $(HVCORE_LIB64) $(hvcore-objs) -Wl,--end-group -ggdb
 
 # Compress the target ELF64 with XZ
 quiet_cmd_hvcore_xz = XZ      $@

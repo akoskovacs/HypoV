@@ -1,119 +1,316 @@
 Archive member included to satisfy reference by file (symbol)
 
-lib/lib.a(string.o)           sys/built-in.o (strlen)
+lib/lib32/lib.a(char_display.o)
+                              sys/built-in.o (hv_stdout)
+lib/lib32/lib.a(pc_console.o)
+                              sys/built-in.o (hv_console_display_init)
+lib/lib32/lib.a(print.o)      sys/built-in.o (hv_printf)
+lib/lib32/lib.a(string.o)     lib/lib32/lib.a(char_display.o) (strlen)
+
+Merging object attributes
+
+
+There are no discarded input sections
 
 Memory Configuration
 
 Name             Origin             Length             Attributes
-*default*        0x0000000000000000 0xffffffffffffffff
+*default*        0x00000000         0xffffffff
 
 Linker script and memory map
 
 START GROUP
-LOAD lib/lib.a
+LOAD lib/lib32/lib.a
 LOAD sys/built-in.o
 LOAD boot/built-in.o
+LOAD sys/core/hvcore.elf64.o
 END GROUP
-                0x0000000000001000                . = 0x1000
+                0x00001000                        . = 0x1000
 
-.multiboot      0x0000000000001000       0x24
+.multiboot      0x00001000       0xec
+                0x00001000                        __image_start = .
  *(.multiboot.header)
- .multiboot     0x0000000000001000       0x24 boot/built-in.o
-                0x0000000000100000                . = 0x100000
+ .multiboot.header
+                0x00001000        0xc boot/built-in.o
+ *(.chainloader.text)
+ .chainloader.text
+                0x0000100c       0xe0 boot/built-in.o
+                0x0000103b                sys_chainload
+                0x00100000                        . = 0x100000
 
-.text           0x0000000000100000     0x3047
+.text           0x00100000     0x7600
+                0x00100000                        __text_start = .
  *(.multiboot.text)
+ .multiboot.text
+                0x00100000       0x21 boot/built-in.o
+                0x00100000                hv_multiboot_entry
  *(.text)
- .text          0x0000000000100000     0x2098 sys/built-in.o
-                0x000000000010003f                keyboard_set_keymap
-                0x0000000000100082                keyboard_scancode_for
-                0x000000000010009e                keyboard_get_scancode
-                0x00000000001000cf                keyboard_read
-                0x0000000000100113                sys_reboot
-                0x0000000000100157                keyboard_loop
-                0x000000000010101d                hv_console_display_init
-                0x00000000001010c3                hv_console_setup
-                0x00000000001010d9                hv_console_clear
-                0x000000000010110b                hv_console_putc_xya
-                0x00000000001011ee                hv_console_putc_xy
-                0x0000000000101222                hv_console_putc
-                0x00000000001013b5                hv_console_scroll_up
-                0x0000000000101458                hv_console_scroll_down
-                0x00000000001014ed                hv_console_get_xy
-                0x000000000010154c                hv_console_get_max_xy
-                0x00000000001015b1                hv_console_fill_line
-                0x00000000001015f1                hv_console_cursor_disable
-                0x0000000000101615                hv_entry
-                0x000000000010165d                hv_disp_setup
-                0x0000000000101694                hv_disp_clear
-                0x00000000001016cb                hv_disp_get_xy
-                0x0000000000101708                hv_disp_get_max_xy
-                0x0000000000101745                hv_disp_putc
-                0x0000000000101787                hv_disp_putc_xy
-                0x00000000001017cc                hv_disp_puts_xy
-                0x0000000000101853                hv_disp_puts
-                0x00000000001018d5                dc_start
-                0x0000000000101903                dc_show_screen
-                0x0000000000101956                dc_top_menu_draw
-                0x0000000000101af7                dc_bottom_menu_draw
-                0x0000000000101c2e                dc_keyboard_handler
-                0x0000000000101fe5                cpuid_get_branding
-                0x0000000000102039                cpuid_get_vendor
- *fill*         0x0000000000102098      0xf68 
- .text          0x0000000000103000       0x16 boot/built-in.o
-                0x0000000000103000                hv_multiboot_entry
- .text          0x0000000000103016       0x31 lib/lib.a(string.o)
-                0x0000000000103016                strlen
+ *fill*         0x00100021        0xf 
+ .text          0x00100030     0x648f sys/built-in.o
+                0x0010008e                keyboard_init
+                0x001000bf                keyboard_set_keymap
+                0x00100102                keyboard_scancode_for
+                0x0010011e                keyboard_get_scancode
+                0x0010015d                keyboard_read
+                0x001001a3                sys_reboot
+                0x001001e7                keyboard_loop
+                0x00101268                xz_dec_run
+                0x00101340                xz_dec_init
+                0x001013e4                xz_dec_reset
+                0x0010145c                xz_dec_end
+                0x00102773                xz_dec_lzma2_run
+                0x00102c2b                xz_dec_lzma2_create
+                0x00102caf                xz_dec_lzma2_reset
+                0x00102daa                xz_dec_lzma2_end
+                0x00102db0                xz_crc32_init
+                0x00102e13                xz_crc32
+                0x0010398b                xz_dec_bcj_run
+                0x00103c15                xz_dec_bcj_create
+                0x00103c41                xz_dec_bcj_reset
+                0x00103cee                hv_entry
+                0x00103d9f                dc_start
+                0x00103ddf                dc_show_screen
+                0x00103e3f                dc_top_menu_draw
+                0x00103fba                dc_bottom_show_message
+                0x0010402a                dc_bottom_menu_draw
+                0x00104114                dc_keyboard_handler
+                0x00104fbb                cpuid_get_branding
+                0x00105011                cpuid_get_vendor
+                0x0010508b                mm_get_heap_end
+                0x001050a8                mm_expand_heap
+                0x001050cd                mm_expand_heap_4k
+                0x001051c5                mm_init_mapping
+                0x0010533d                mm_alloc_phymap
+                0x00105715                mm_init_pml4
+                0x0010576e                mm_init_page_tables
+                0x00105796                mm_init_paging
+                0x00105914                cpu_get_info
+                0x00105945                cpu_set_info
+                0x00105a24                cpu_init_long_mode
+                0x00105ad8                cpu_tables_init
+                0x00105c00                __cpu_long_mode_enter
+                0x00105c18                __cpu_call_64
+                0x00105c3f                __gdt_setup_32
+                0x00105c6e                __tss_setup_32
+                0x00105c8a                elf64_is_header_valid
+                0x00105e83                elf64_load
+                0x001060ab                ld_deflate_hvcore
+                0x00106137                ld_load_hvcore
+                0x001061a9                ld_call_hvcore
+                0x0010620e                unxz
+ *fill*         0x001064bf        0x1 
+ .text          0x001064c0        0x0 boot/built-in.o
+ .text          0x001064c0      0x284 lib/lib32/lib.a(char_display.o)
+                0x001064c0                hv_disp_setup
+                0x001064f9                hv_disp_clear
+                0x00106532                hv_disp_get_xy
+                0x00106571                hv_disp_get_max_xy
+                0x001065b0                hv_disp_putc
+                0x001065ee                hv_disp_putc_xy
+                0x0010662f                hv_disp_puts_xy
+                0x001066c0                hv_disp_puts
+ .text          0x00106744      0x610 lib/lib32/lib.a(pc_console.o)
+                0x00106751                hv_console_display_init
+                0x001067f7                hv_console_setup
+                0x0010680f                hv_console_clear
+                0x00106843                hv_console_putc_xya
+                0x00106923                hv_console_putc_xy
+                0x00106953                hv_console_putc
+                0x00106aea                hv_console_scroll_up
+                0x00106b8c                hv_console_scroll_down
+                0x00106c24                hv_console_get_xy
+                0x00106c85                hv_console_get_max_xy
+                0x00106cec                hv_console_fill_line
+                0x00106d2e                hv_console_cursor_disable
+ .text          0x00106d54      0x3e5 lib/lib32/lib.a(print.o)
+                0x00106d54                hv_vsnprintf
+                0x00107079                hv_snprintf
+                0x001070a4                hv_printf
+                0x001070ed                hv_printf_xy
+ .text          0x00107139      0x4c7 lib/lib32/lib.a(string.o)
+                0x00107139                strlen
+                0x00107169                strcpy
+                0x00107199                strncpy
+                0x001071d0                strcmp
+                0x00107222                hexdigit
+                0x0010729b                itoa
+                0x0010736b                uitoa
+                0x0010741c                bzero
+                0x00107443                memcpy
+                0x00107481                memeq
+                0x001074cf                memzero
+                0x00107502                memmove
+                0x0010757e                memcmp
+                0x001075d0                memset
+                0x00107600                        __text_end = .
 
-.iplt           0x0000000000103050        0x0
- .iplt          0x0000000000103050        0x0 sys/built-in.o
+.iplt           0x00107600        0x0
+ .iplt          0x00107600        0x0 sys/built-in.o
 
-.rodata         0x0000000000104000     0x1177
+.rodata         0x00108000      0x700
  *(.rodata)
- .rodata        0x0000000000104000     0x1177 sys/built-in.o
-                0x0000000000104000                kbd_hu_keymap
-                0x0000000000104040                kbd_hu_spec_keys
+ .rodata        0x00108000      0x6e3 sys/built-in.o
+                0x00108000                kbd_hu_keymap
+                0x00108040                kbd_hu_spec_keys
+ .rodata        0x001086e3       0x11 lib/lib32/lib.a(pc_console.o)
+ .rodata        0x001086f4        0xc lib/lib32/lib.a(print.o)
 
-.data           0x0000000000106000     0x1084
+.hvcore_payload
+                0x00108700     0x3edc
+ .hvcore_payload
+                0x00108700     0x3edc sys/core/hvcore.elf64.o
+                0x00108700                __hvcore_start
+                0x0010c5dc                __hvcore_end
+
+.rel.dyn        0x0010c5dc        0x0
+ .rel.got       0x0010c5dc        0x0 sys/built-in.o
+ .rel.iplt      0x0010c5dc        0x0 sys/built-in.o
+ .rel.text      0x0010c5dc        0x0 sys/built-in.o
+
+.data           0x0010d000       0x9a
  *(.data)
- .data          0x0000000000106000     0x1084 sys/built-in.o
-                0x0000000000107000                disp
- .data          0x0000000000107084        0x0 lib/lib.a(string.o)
+ .data          0x0010d000       0x9a sys/built-in.o
+ .data          0x0010d09a        0x0 lib/lib32/lib.a(char_display.o)
+ .data          0x0010d09a        0x0 lib/lib32/lib.a(pc_console.o)
+ .data          0x0010d09a        0x0 lib/lib32/lib.a(print.o)
+ .data          0x0010d09a        0x0 lib/lib32/lib.a(string.o)
 
-.igot.plt       0x0000000000107084        0x0
- .igot.plt      0x0000000000107084        0x0 sys/built-in.o
+.got            0x0010d09c        0x0
+ .got           0x0010d09c        0x0 sys/built-in.o
 
-.bss            0x0000000000108000     0x3000
- *(.COMMON)
- *(.bss)
- .bss           0x0000000000108000     0x109c sys/built-in.o
-                0x0000000000109000                main_display
-                0x0000000000109038                stdout
-                0x0000000000109040                vendor
-                0x0000000000109060                branding
-                0x0000000000109094                branding_start
- *fill*         0x000000000010909c      0xf64 
- .bss           0x000000000010a000     0x1000 boot/built-in.o
- .bss           0x000000000010b000        0x0 lib/lib.a(string.o)
+.got.plt        0x0010d09c        0x0
+ .got.plt       0x0010d09c        0x0 sys/built-in.o
 
-.note           0x000000000010b000       0x24
- *(.note.gnu.build-id)
- .note.gnu.build-id
-                0x000000000010b000       0x24 sys/built-in.o
-OUTPUT(hypov.bin elf32-i386)
+.igot.plt       0x0010d09c        0x0
+ .igot.plt      0x0010d09c        0x0 sys/built-in.o
 
-.rel.dyn        0x000000000010b024        0x0
- .rel.iplt      0x000000000010b024        0x0 sys/built-in.o
- .rel.text      0x000000000010b024        0x0 sys/built-in.o
+.debug_abbrev   0x0010d09a     0x1f2f
+ *(.debug_abbrev)
+ .debug_abbrev  0x0010d09a     0x19d8 sys/built-in.o
+ .debug_abbrev  0x0010ea72      0x159 lib/lib32/lib.a(char_display.o)
+ .debug_abbrev  0x0010ebcb      0x189 lib/lib32/lib.a(pc_console.o)
+ .debug_abbrev  0x0010ed54      0x136 lib/lib32/lib.a(print.o)
+ .debug_abbrev  0x0010ee8a      0x13f lib/lib32/lib.a(string.o)
 
-.comment        0x0000000000000000       0x34
- .comment       0x0000000000000000       0x34 sys/built-in.o
-                                        0x13e (size before relaxing)
- .comment       0x0000000000000034       0x35 lib/lib.a(string.o)
+.debug_aranges  0x0010d09a      0x200
+ *(.debug_aranges)
+ .debug_aranges
+                0x0010d09a      0x180 sys/built-in.o
+ .debug_aranges
+                0x0010d21a       0x20 lib/lib32/lib.a(char_display.o)
+ .debug_aranges
+                0x0010d23a       0x20 lib/lib32/lib.a(pc_console.o)
+ .debug_aranges
+                0x0010d25a       0x20 lib/lib32/lib.a(print.o)
+ .debug_aranges
+                0x0010d27a       0x20 lib/lib32/lib.a(string.o)
+
+.debug_frame    0x0010d09c     0x1948
+ *(.debug_frame)
+ .debug_frame   0x0010d09c     0x1400 sys/built-in.o
+ .debug_frame   0x0010e49c      0x118 lib/lib32/lib.a(char_display.o)
+ .debug_frame   0x0010e5b4      0x1bc lib/lib32/lib.a(pc_console.o)
+ .debug_frame   0x0010e770       0x98 lib/lib32/lib.a(print.o)
+ .debug_frame   0x0010e808      0x1dc lib/lib32/lib.a(string.o)
+
+.debug_info     0x0010d09a     0x8353
+ *(.debug_info)
+ .debug_info    0x0010d09a     0x6ead sys/built-in.o
+ .debug_info    0x00113f47      0x434 lib/lib32/lib.a(char_display.o)
+ .debug_info    0x0011437b      0x6a4 lib/lib32/lib.a(pc_console.o)
+ .debug_info    0x00114a1f      0x46c lib/lib32/lib.a(print.o)
+ .debug_info    0x00114e8b      0x562 lib/lib32/lib.a(string.o)
+
+.debug_line     0x0010d09a     0x3770
+ *(.debug_line)
+ .debug_line    0x0010d09a     0x2dc1 sys/built-in.o
+ .debug_line    0x0010fe5b      0x1c7 lib/lib32/lib.a(char_display.o)
+ .debug_line    0x00110022      0x31d lib/lib32/lib.a(pc_console.o)
+ .debug_line    0x0011033f      0x18f lib/lib32/lib.a(print.o)
+ .debug_line    0x001104ce      0x33c lib/lib32/lib.a(string.o)
+
+.debug_loc
+ *(.debug_loc)
+
+.debug_macinfo
+ *(.debug_macinfo)
+
+.debug_pubnames
+ *(.debug_pubnames)
+
+.debug_pubtypes
+ *(.debug_pubtypes)
+
+.debug_ranges
+ *(.debug_ranges)
+
+.debug_str      0x0010d09a     0x2859
+ *(.debug_str)
+ .debug_str     0x0010d09a     0x2859 sys/built-in.o
+                               0x58d0 (size before relaxing)
+ .debug_str     0x0010f8f3        0x0 lib/lib32/lib.a(char_display.o)
+                                0x362 (size before relaxing)
+ .debug_str     0x0010f8f3        0x0 lib/lib32/lib.a(pc_console.o)
+                                0x562 (size before relaxing)
+ .debug_str     0x0010f8f3        0x0 lib/lib32/lib.a(print.o)
+                                0x2fe (size before relaxing)
+ .debug_str     0x0010f8f3        0x0 lib/lib32/lib.a(string.o)
+                                0x22d (size before relaxing)
+
+.comment        0x00000000       0x12
+ .comment       0x00000000       0x12 sys/built-in.o
+                                 0xe4 (size before relaxing)
+ .comment       0x00000012        0x0 lib/lib32/lib.a(char_display.o)
+                                 0x13 (size before relaxing)
+ .comment       0x00000012        0x0 lib/lib32/lib.a(pc_console.o)
+                                 0x13 (size before relaxing)
+ .comment       0x00000012        0x0 lib/lib32/lib.a(print.o)
+                                 0x13 (size before relaxing)
+ .comment       0x00000012        0x0 lib/lib32/lib.a(string.o)
+                                 0x13 (size before relaxing)
 
 .note.GNU-stack
-                0x0000000000000000        0x0
+                0x00000000        0x0
  .note.GNU-stack
-                0x0000000000000000        0x0 sys/built-in.o
+                0x00000000        0x0 sys/built-in.o
  .note.GNU-stack
-                0x0000000000000000        0x0 lib/lib.a(string.o)
+                0x00000000        0x0 boot/built-in.o
+
+.bss            0x0010e000     0x156c
+ *(.COMMON)
+ *(.bss)
+ .bss           0x0010e000      0x568 sys/built-in.o
+ .bss           0x0010e568     0x1000 boot/built-in.o
+ .bss           0x0010f568        0x4 lib/lib32/lib.a(char_display.o)
+                0x0010f568                hv_stdout
+ .bss           0x0010f56c        0x0 lib/lib32/lib.a(pc_console.o)
+ .bss           0x0010f56c        0x0 lib/lib32/lib.a(print.o)
+ .bss           0x0010f56c        0x0 lib/lib32/lib.a(string.o)
+                0x0010f56c                        __image_end = .
+
+.note
+ *(.note.gnu.build-id)
+OUTPUT(hypov.bin elf32-i386)
+
+.debug_line_str
+                0x00000000      0x2c6
+ .debug_line_str
+                0x00000000      0x2c6 sys/built-in.o
+                                0x85b (size before relaxing)
+ .debug_line_str
+                0x000002c6        0x0 lib/lib32/lib.a(char_display.o)
+                                 0xb1 (size before relaxing)
+ .debug_line_str
+                0x000002c6        0x0 lib/lib32/lib.a(pc_console.o)
+                                 0xda (size before relaxing)
+ .debug_line_str
+                0x000002c6        0x0 lib/lib32/lib.a(print.o)
+                                 0x8c (size before relaxing)
+ .debug_line_str
+                0x000002c6        0x0 lib/lib32/lib.a(string.o)
+                                 0x6f (size before relaxing)
+
+.debug_rnglists
+                0x00000000       0x1c
+ .debug_rnglists
+                0x00000000       0x1c sys/built-in.o

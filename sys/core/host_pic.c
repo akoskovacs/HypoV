@@ -39,8 +39,8 @@
 
 void pic_disable(void)
 {
-    outb(PIC1_CMD_PORT, 0xFF);
     outb(PIC0_DATA_PORT, 0xFF);
+    outb(PIC1_DATA_PORT, 0xFF);
 }
 
 void pic_send_eoi(uint8_t irq)

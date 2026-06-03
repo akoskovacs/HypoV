@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y build-essential gcc-i686-linux-gnu binutils-i686-linux-gnu yasm grub-common grub-pc-bin xorriso mtools
+
+      - name: Set up cross-compiler shims
+        run: |
+          # 64-bit core sub-Makefiles hardcode x86_64-elf-* names; native gcc is already x86_64.
+          # -no-pie is required because Ubuntu's ld defaults to PIE, which breaks bare-metal linking.
+          printf '#!/bin/sh\nexec gcc -no-pie "$@"\n' | sudo tee /usr/local/bin/x86_64-elf-gcc > /dev/null
+          sudo chmod +x /usr/local/bin/x86_64-elf-gcc
+          sudo ln -s /usr/bin/ld  /usr/local/bin/x86_64-elf-ld
+          sudo ln -s /usr/bin/ar  /usr/local/bin/x86_64-elf-ar
+
+          # grub-mkrescue is already available; expose it under the Homebrew name used in the Makefile
+          sudo ln -s /usr/bin/grub-mkrescue /usr/local/bin/i686-elf-grub-mkrescue
+
+      - name: Build ISO
+        run: make CROSS_COMPILE=i686-linux-gnu- GRUB_MKRESCUE=grub-mkrescue iso
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hypov-${{ github.sha }}
+          path: |
+            hypov.iso
+            hypov.bin
+            HypoV.map
+            sys/core/hvcore.elf64
+            sys/core/hvcore.elf64.xz

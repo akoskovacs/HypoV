@@ -83,8 +83,7 @@ int hv_disp_puts_xy(struct CharacterDisplay *this, int x, int y, const char *lin
     }
 
     for (i = 0; i < size; i++) {
-        // NOTE: No out of screen handling
-        r = this->disp_putc_xy(this, x+1, y, line[i]);
+        r = this->disp_putc_xy(this, x+i, y, line[i]);
         if (r < 0) {
             return r;
         }

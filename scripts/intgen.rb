@@ -46,4 +46,5 @@ File.open file_name, 'w' do |iw|
         iw.puts "#{SPACES}dq #{INT_WRAPPER}#{inum}"
     end
     iw.puts ""
+    iw.puts "section .note.GNU-stack noalloc noexec nowrite progbits"
 end
