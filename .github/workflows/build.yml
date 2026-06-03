@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  push:
+    branches: [master, fix-64bit-mode]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y build-essential gcc-multilib yasm grub-common grub-pc-bin xorriso
+
+      - name: Set up cross-compiler shims
+        run: |
+          # 64-bit: native gcc on x86_64 Ubuntu is already x86_64
+          sudo ln -s /usr/bin/gcc  /usr/local/bin/x86_64-elf-gcc
+          sudo ln -s /usr/bin/ld   /usr/local/bin/x86_64-elf-ld
+          sudo ln -s /usr/bin/ar   /usr/local/bin/x86_64-elf-ar
+
+          # 32-bit: use native gcc in -m32 mode (gcc-multilib provides the 32-bit libs)
+          printf '#!/bin/sh\nexec gcc -m32 "$@"\n' | sudo tee /usr/local/bin/i686-elf-gcc > /dev/null
+          printf '#!/bin/sh\nexec ld -m elf_i386 "$@"\n' | sudo tee /usr/local/bin/i686-elf-ld > /dev/null
+          sudo ln -s /usr/bin/ar   /usr/local/bin/i686-elf-ar
+          sudo chmod +x /usr/local/bin/i686-elf-gcc /usr/local/bin/i686-elf-ld
+
+          # grub-mkrescue is already available; expose it under the Homebrew name too
+          sudo ln -s /usr/bin/grub-mkrescue /usr/local/bin/i686-elf-grub-mkrescue
+
+      - name: Build ISO
+        run: make iso
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hypov-${{ github.sha }}
+          path: |
+            hypov.iso
+            hypov.bin
+            HypoV.map
+            sys/core/hvcore.elf64
+            sys/core/hvcore.elf64.xz

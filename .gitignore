@@ -2,6 +2,10 @@
 *.map
 tags
 .*
+!.github
+!.gitignore
+!.gitlab-ci.yml
+!.gdbinit
 *.a
 *.img
 *.bin
