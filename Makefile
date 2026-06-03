@@ -431,9 +431,15 @@ qemufs: hypov
 qemuiso: hypov.iso
 	$(Q)$(QEMU64) -serial stdio -cdrom $^
 
+# TCG (software emulation) with VMX exposed — no KVM/HVF needed, works on macOS
+qemutcg: hypov.iso
+	$(Q)$(QEMU64) -M q35 -cpu qemu64,+vmx -m 512 -serial stdio -cdrom $^
+
+qemutcgdbg: hypov.iso
+	$(Q)$(QEMU64) -M q35 -cpu qemu64,+vmx -m 512 -serial stdio -cdrom $^ -S -s
+
 qemudbg: hypov.iso
 	$(Q)$(QEMU64) -serial stdio -cdrom $^ -S -s
-	#$(Q)$(QEMU64) -kernel $(BINARY_TARGET) -S -s
 
 bochs: hypov
 	$(Q)$(BOCHS)
@@ -464,7 +470,7 @@ $(sort $(hypov-all)): $(hypov-dirs) ;
 
 #PHONY += $(vmlinux-dirs)
 #$(vmlinux-dirs): prepare scripts
-PHONY += $(hypov-dirs) iso bochs qemu qemufs mkfs upfs
+PHONY += $(hypov-dirs) iso bochs qemu qemufs qemutcg qemutcgdbg mkfs upfs
 $(hypov-dirs): scripts_basic
 	$(Q)$(MAKE) $(build)=$@
 
