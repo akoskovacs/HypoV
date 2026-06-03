@@ -31,15 +31,20 @@ ret
 ; seglimit : di
 ; base : rsi
 __gdt_setup_64:
-;    xchg bx, bx
+;    xchg bx, bx ; Bochs
     mov [rel gdt_segment_limit], di
     mov [rel gdt_segment_base], rsi
     lgdt [rel gdt_segment_limit]
-;    jmp far GDT_SEL(GDT_HV_CODE64):.segment_setup
-    jmp .segment_setup
-.segment_setup:
-    ; The other segments are ignored in 64 bit mode
+    ; Far return to reload CS with the new code64 selector
+    lea rax, [rel gdt64_seg_done]
+    push GDT_SEL(GDT_HV_CODE64)
+    push rax
+    db 0x48, 0xCB ; REX.W retf (retfq)
+gdt64_seg_done:
     mov ax, GDT_SEL(GDT_HV_DATA64)
+    mov ss, ax
+    mov ds, ax
+    mov es, ax
     mov fs, ax
     mov gs, ax
 ret

@@ -49,31 +49,8 @@ void __noreturn hv_entry(struct MultiBootInfo *mbi)
     system_info.s_cpu_info = cpu_get_info();
     system_info.s_core_map = mm_alloc_phymap(system_info.s_phy_maps, 16, &error);
     hv_console_cursor_disable();
-#if 0
-    struct MemoryMap *hvmap = system_info.s_core_map;
-    if (error != 0) {
-        hv_printf(system_info.s_display, "error %d", error);
-    } else if (hvmap != NULL) {
-        hv_printf(system_info.s_display, "start: %X%X, end: %X%X\n", hvmap->mm_start, hvmap->mm_end);
-        struct Elf64_Image *im = ld_load_hvcore(hvmap, &error);
-        if (error == 0) {
-            hv_printf(system_info.s_display, "ELF successfully loaded\n");
-            /* WHOA, calling it */
-            hv_printf(system_info.s_display, "Entry function: %x\n", im->i_entry);
-            cpu_init_long_mode(&system_info);
-            ld_call_hvcore(&system_info);
-        } else {
-            hv_printf(system_info.s_display, "error %d", error);
-            hv_printf(system_info.s_display, "ELF load failed :(\n");
-        }
-        //dc_start(&system_info);
-    } else {
-        dc_start(&system_info);
-    }
-#else
-    dc_start(&system_info);
-#endif 
 
+    dc_start(&system_info);
     keyboard_loop(dc_keyboard_handler);
 
     while (1)

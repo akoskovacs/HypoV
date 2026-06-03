@@ -22,7 +22,7 @@
 #define ARCH_X86_64  0x3E
 #define SZ_MAX_PAYLOAD 10*1024*1024 // 10MB
 
-/* Pointers to the embedded ELF64 core image */
+/* Pointers to the embedded ELF64 core image (provided by objcopy) */
 extern uint32_t __hvcore_start;
 extern uint32_t __hvcore_end;
 extern uint32_t __hvcore_size;
@@ -151,8 +151,8 @@ struct Elf64_Image *elf64_load(void *image_begin, void *image_end, void *target,
         *error = -HV_ENOVALID;
         return im;
     } else {
-        /* Yay entry point */
-        im->i_entry = (void(*)(uint32_t))pexec;
+        /* Compute entry point: target base + (ELF entry VA - first segment VA) */
+        im->i_entry = (void(*)(uint32_t))((uint8_t *)target + (im->i_header->e_entry - base_off));
     }
 
     return im;
@@ -194,10 +194,13 @@ struct Elf64_Image *ld_load_hvcore(struct MemoryMap *hvmap, int *error, void *im
 {
     struct Elf64_Image *im = NULL;
     void *im_end   = (unsigned char *)im_start + sz_image;
-    uint32_t laddr = 0; 
 
-    /* Forcefully truncate size, cannot load anything above 4GB */
-    laddr = (uint32_t)hvmap->mm_start;
+    /* Load at the ELF's linked address (from the first LOAD segment's p_paddr).
+       The ELF is linked with absolute addresses and must be loaded there. */
+    struct Elf64_Hdr *ehdr = (struct Elf64_Hdr *)im_start;
+    struct Elf64_Phdr *phdr = (struct Elf64_Phdr *)(((uint8_t *)im_start) + ehdr->e_phoff);
+    uint32_t laddr = (uint32_t)phdr->p_paddr;
+
     im = elf64_load(im_start, im_end, (void *)laddr, error);
     if (*error != 0 || im == NULL) {
         return NULL;

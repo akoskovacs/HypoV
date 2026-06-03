@@ -1,6 +1,7 @@
+CC := x86_64-elf-gcc
+LD := x86_64-elf-ld
 subdir-ccflags-y := -fPIC
 subdir-ccflags-y += -fvisibility=protected
-subdir-ccflags-y += -m64
 subdir-ccflags-y += -mno-red-zone
 subdir-ldflags-y := -Wl$(comma)-melf_x86_64
 yasmflags-y := -felf64

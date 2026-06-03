@@ -14,6 +14,7 @@ extern os_error_stub
 section .text
 bits 64
 hv_entry_64:
+    cli
     xchg bx, bx ; Bochs
     lea rsp, [rel hv_stack_64+CONFIG_SZ_HV_STACK]
     ; Operating systems usually clear the RDI register

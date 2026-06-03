@@ -22,19 +22,13 @@ extern sys_chainload
 
 %define MB_LDR_MAGIC    0x2BADB002
 
-; Multiboot header start
+; Multiboot header — must be within first 8192 bytes of the file
 align 4
 section .multiboot.header
 multiboot_header_start:
     dd MB_MAGIC
     dd MB_FLAGS
     dd MB_CHECKSUM
-    dd 0 ; Header address
-    dd 0 ; Loader address
-    dd 0 ; Loader address end
-    dd 0 ; BSS address end
-    dd 0 ; Entry-point address
-    dd 0 ; Mode type
 
 section .multiboot.text
 bits 32
@@ -49,7 +43,7 @@ hv_multiboot_entry:
 ; The stack grows down from the reserved area
     mov esp, hv_stack+CONFIG_STACK_SIZE
     mov ebp, esp
-; If the magic number is wrong, we cannot trust the bootloader 
+; If the magic number is wrong, we cannot trust the bootloader
 ; anymore. Abort booting and try to chainload something else.
     cmp eax, MB_LDR_MAGIC
     jne .panic_chainload

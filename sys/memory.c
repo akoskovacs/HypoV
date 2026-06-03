@@ -232,8 +232,8 @@ static npa_t mm_init_pml3(void)
         npa_t pml2_pa = mm_init_pml2(ptep, pa);
         pml3[i]       = PML_PRESENT | PML_RW | PML_SUPER | pml2_pa;
         pa           += (PAGE_SIZE_2M * PAGE_TBL_NR_ENTRIES);
-        /* Get the next PML2 table */
-        ptep          = (pml2_t *)((char *)ptep) + (PAGE_TBL_NR_ENTRIES * PAGE_SIZE_4K);
+        /* Get the next PML2 table (each is one 4K page = 512 entries * 8 bytes) */
+        ptep          = (pml2_t *)((char *)ptep + PAGE_SIZE_4K);
     }
     return (npa_t)pml3;
 }
