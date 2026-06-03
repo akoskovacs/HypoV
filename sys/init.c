@@ -50,8 +50,20 @@ void __noreturn hv_entry(struct MultiBootInfo *mbi)
     system_info.s_core_map = mm_alloc_phymap(system_info.s_phy_maps, 16, &error);
     hv_console_cursor_disable();
 
+#ifdef CONFIG_AUTOBOOT
+    /* Headless mode: skip interactive console, load and launch immediately */
+    {
+        int sz_image = 0;
+        void *elf_start = NULL;
+        system_info.s_core_map = mm_alloc_phymap(system_info.s_phy_maps, CONFIG_NR_HV_PAGES, &error);
+        sz_image = ld_deflate_hvcore(system_info.s_core_map, &error, &elf_start);
+        system_info.s_core_image = ld_load_hvcore(system_info.s_core_map, &error, elf_start, sz_image);
+        ld_call_hvcore(&system_info);
+    }
+#else
     dc_start(&system_info);
     keyboard_loop(dc_keyboard_handler);
+#endif
 
     while (1)
         ;

@@ -1,4 +1,11 @@
 menu "Debug Console"
+    config AUTOBOOT
+        bool "Automatically load and launch the hypervisor without user interaction"
+        default n
+        help
+          Skip the interactive debug console and immediately load and launch
+          the 64-bit hypervisor core. Useful for automated testing (CI).
+
     menu "Memory-mappings" 
         config NR_MMAP_MAX_ENTRIES
             default 10
