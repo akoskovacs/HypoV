@@ -11,6 +11,7 @@
 #include <interrupt.h>
 #include <print.h>
 #include <system.h>
+#include <vmx.h>
 
 extern void os_error_stub(void);
 void cpu_init_tables(void);
@@ -19,11 +20,10 @@ struct ConsoleDisplay main_display;
 struct CharacterDisplay *display = (struct CharacterDisplay *)&main_display;
 struct CharacterDisplay debug_serial;
 
+static struct VmxState vmx_state;
+
 void hv_start(uint32_t arg)
 {
-    int out_times = 10;
-
-    /* No arguments, we must be executed from an OS, hopefully Linux :D */
 #ifdef CONFIG_HV_OS_STUB
     if (arg == 0x0) {
         os_error_stub();
@@ -37,31 +37,51 @@ void hv_start(uint32_t arg)
 
     hv_serial_init(&debug_serial);
     hv_disp_setup(&debug_serial);
-    const char hello[] = "hello";
-    int n = hv_printf(&debug_serial, "Hypervisor hv_start() entry at \n");
-    bochs_breakpoint();
-    hv_printf(&debug_serial, "hello = %s\n", hello);
-    hv_printf(&debug_serial, "n = %d\n", n);
-    n = hv_printf(&debug_serial, "%x%x\n", hv_start);
-    hv_printf(&debug_serial, "n = %d\n", n);
-    //hv_printf(&debug_serial, "Display pointer %X\n", display);
 
     hv_console_display_init(&main_display);
     hv_disp_setup(display);
     hv_set_stdout(display);
     hv_console_set_attribute(&main_display, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT);
     hv_console_set_xy(&main_display, 0, 0);
-    bochs_breakpoint();
-    //hv_console_puts_xya(&main_display, 0, 1, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT, "HELLO!!!");
 
-    int i = 0;
-    while (i < out_times) {
-        hv_disp_puts_xy(display, 0, i, "64 bit hypervisor startup...\n");
-        i++;
+    hv_printf(display, "HypoV 64-bit hypervisor core\n\n");
+    hv_printf(&debug_serial, "HypoV hv_start()\n");
+
+    /* Check for VT-x support */
+    if (vmx_check_support() != 0) {
+        hv_printf(display, "Error: VT-x not supported\n");
+        goto halt;
     }
 
-    while (1) {
-        //halt();
+    /* Read and print VMX capability MSRs */
+    if (vmx_read_capabilities(&vmx_state.vs_caps) != 0) {
+        hv_printf(display, "Error: failed to read VMX capabilities\n");
+        goto halt;
+    }
+    vmx_print_info(&vmx_state.vs_caps);
+
+    if (!vmx_state.vs_caps.vc_unrestricted_guest) {
+        hv_printf(display, "Error: unrestricted guest not supported (required for real-mode boot)\n");
+        goto halt;
+    }
+
+    /* Enter VMX root operation */
+    if (vmx_enable(&vmx_state) != 0) {
+        hv_printf(display, "Error: VMXON failed\n");
+        goto halt;
+    }
+
+    /* Initialize VMCS with host/guest/control fields */
+    if (vmcs_init(&vmx_state) != 0) {
+        hv_printf(display, "Error: VMCS init failed\n");
+        goto halt;
+    }
+    hv_printf(display, "VMCS initialized\n");
+
+    hv_printf(display, "\nReady to launch guest.\n");
+    hv_printf(&debug_serial, "VMX initialized, ready for VMLAUNCH\n");
+
+halt:
+    while (1)
         ;
-    }
 }

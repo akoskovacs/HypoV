@@ -16,6 +16,11 @@ hvobj-y += host_int.o
 hvobj-y += host_pic.o
 hvobj-y += int_wrappers.o
 hvobj-y += int_handler.o
+hvobj-y += vmx.o
+hvobj-y += vmx_ll.o
+hvobj-y += vmcs.o
+hvobj-y += ept.o
+hvobj-y += vmx_exit.o
 hvobj-y += drivers/
 
 sys/core/int_wrappers.asm: 
