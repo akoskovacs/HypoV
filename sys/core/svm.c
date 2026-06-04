@@ -37,7 +37,8 @@ static void vmcb_init_guest_state(struct Vmcb *v)
 {
     struct SvmStateSave *ss = &v->state;
 
-    /* Real-mode segment setup */
+    /* Entry at 0x8000: a tiny stub loads the HDD MBR via INT 13h.
+     * INT 13h is already wired up by the BIOS before HypoV loaded. */
     seg_set(&ss->cs,   0, 0, 0xFFFF, SVM_ATTRIB_REALMODE_CODE);
     seg_set(&ss->ds,   0, 0, 0xFFFF, SVM_ATTRIB_REALMODE_DATA);
     seg_set(&ss->ss,   0, 0, 0xFFFF, SVM_ATTRIB_REALMODE_DATA);
@@ -51,13 +52,16 @@ static void vmcb_init_guest_state(struct Vmcb *v)
     ss->gdtr.base  = 0; ss->gdtr.limit = 0xFFFF;
     ss->idtr.base  = 0; ss->idtr.limit = 0x03FF;
 
-    ss->efer   = 0;      /* no long mode */
-    ss->cr0    = 0;      /* real mode: PE=0, PG=0 */
+    /* SVME must be set in guest EFER per AMD APM and QEMU validation */
+    ss->efer   = EFER_SVME;
+    /* CR0 reset value: ET=1 (bit 4), PE=0, PG=0 — real mode */
+    ss->cr0    = (1ULL << 4);
     ss->cr3    = 0;
     ss->cr4    = 0;
+    ss->dr6    = 0xFFFF0FF0; /* reserved bits must be 1 (AMD APM reset value) */
     ss->dr7    = 0x400;
     ss->rflags = 0x2;    /* reserved bit always 1 */
-    ss->rip    = 0x7C00; /* MBR entry point */
+    ss->rip    = 0x8000; /* HDD boot stub — loads MBR via INT 13h */
     ss->rsp    = 0x7C00;
     ss->rax    = 0;
     ss->cpl    = 0;
@@ -90,16 +94,32 @@ static void vmcb_init_controls(struct Vmcb *v, uint64_t npt_root)
 
 static void svm_skip_instruction(struct Vmcb *v)
 {
-    /* NEXT_RIP is set by the CPU on instruction-induced exits (if supported).
-     * Fall back to reading the next_rip field (offset 0xC8 in control area). */
-    uint64_t next_rip = v->control.exit_code; /* placeholder — we read below */
-    /* next_rip is at VMCB offset 0xC8, stored in a separate field */
-    /* Access it directly via the raw control area memory */
-    next_rip = *(uint64_t *)((uint8_t *)&v->control + 0xC8);
-    if (next_rip)
+    /* Prefer NEXT_RIP (nrip-save CPU feature, VMCB control offset 0xC8) */
+    uint64_t next_rip = *(uint64_t *)((uint8_t *)&v->control + 0xC8);
+    if (next_rip) {
         v->state.rip = next_rip;
-    else
-        v->state.rip++;   /* fallback: won't be right but avoids infinite loop */
+        return;
+    }
+
+    /* For IOIO exits, exit_info2 holds the next sequential RIP */
+    if (v->control.exit_code == SVM_EXIT_IOIO) {
+        v->state.rip = v->control.exit_info2;
+        return;
+    }
+
+    /* Known instruction lengths — avoids rip++ corrupting the guest
+     * when nrip-save is unavailable (e.g. QEMU TCG).               */
+    uint32_t len;
+    switch (v->control.exit_code) {
+    case SVM_EXIT_CPUID:    len = 2; break;  /* 0F A2 */
+    case SVM_EXIT_RDTSC:    len = 2; break;  /* 0F 31 */
+    case SVM_EXIT_RDTSCP:   len = 3; break;  /* 0F 01 F9 */
+    case SVM_EXIT_HLT:      len = 1; break;  /* F4 */
+    case SVM_EXIT_VMMCALL:  len = 3; break;  /* 0F 01 D9 */
+    case 0x6F:              len = 2; break;  /* RDPMC: 0F 33 */
+    default:                len = 1; break;
+    }
+    v->state.rip += len;
 }
 
 static void handle_svm_cpuid(struct Vmcb *v, struct GuestRegisters *regs)
@@ -150,7 +170,9 @@ static void handle_svm_vmmcall(struct Vmcb *v, struct GuestRegisters *regs,
     if (regs->rax == HV_HYPERCALL_SIGNATURE) {
         regs->rbx = HV_HYPERCALL_MAGIC;
         regs->rcx = *exit_count;
-        hv_printf(&debug_serial, "VMMCALL: hypercall, exit_count=%d\n", *exit_count);
+        hv_printf(&debug_serial, "VMMCALL: HypoV hypercall OK! magic=%x exit_count=%d\n",
+                  HV_HYPERCALL_MAGIC, *exit_count);
+        hv_printf(display, "VMMCALL: guest confirmed running under HypoV!\n");
     } else {
         regs->rbx = 0;
         regs->rcx = 0;
@@ -286,11 +308,43 @@ void svm_run_guest(struct SvmState *state)
     struct Vmcb *v = state->ss_vmcb;
     uint64_t vmcb_pa = (uint64_t)v;   /* identity mapped: VA == PA */
 
-    hv_printf(&debug_serial, "SVM: launching guest at RIP=%x\n", v->state.rip);
+    /*
+     * Stub at 0x8000: reads the first sector of the first HDD (drive 0x80)
+     * to 0000:7C00 using BIOS INT 13h, then jumps to it.
+     *
+     * INT 13h is already live — the BIOS set it up before HypoV loaded.
+     * This mirrors real-hardware use: HypoV boots from USB, takes control,
+     * then transparently boots the OS already on the hard drive.
+     */
+    {
+        volatile uint8_t *s = (volatile uint8_t *)0x8000;
+        s[0]=0x31; s[1]=0xC0;               /* xor ax, ax          */
+        s[2]=0x8E; s[3]=0xC0;               /* mov es, ax          */
+        s[4]=0xBB; s[5]=0x00; s[6]=0x7C;   /* mov bx, 0x7C00      */
+        s[7]=0xB4; s[8]=0x02;               /* mov ah, 2           */
+        s[9]=0xB0; s[10]=0x01;              /* mov al, 1           */
+        s[11]=0xB5; s[12]=0x00;             /* mov ch, 0           */
+        s[13]=0xB1; s[14]=0x01;             /* mov cl, 1           */
+        s[15]=0xB6; s[16]=0x00;             /* mov dh, 0           */
+        s[17]=0xB2; s[18]=0x80;             /* mov dl, 0x80 (HDD)  */
+        s[19]=0xCD; s[20]=0x13;             /* int 0x13            */
+        s[21]=0x72; s[22]=0x05;             /* jc fail             */
+        s[23]=0xEA; s[24]=0x00; s[25]=0x7C; /* jmp far 0:0x7C00   */
+        s[26]=0x00; s[27]=0x00;
+        s[28]=0xFA;                          /* fail: cli           */
+        s[29]=0xF4;                          /* hlt                 */
+        s[30]=0xEB; s[31]=0xFC;             /* jmp $-2             */
+    }
+
+    hv_printf(&debug_serial, "SVM: booting guest OS from HDD via INT 13h\n");
+    hv_printf(display, "Booting guest OS...\n");
     hv_printf(display, "Launching guest...\n");
 
     while (1) {
         svm_vmrun(vmcb_pa, &state->ss_guest_regs);
+        /* Guest RAX is auto-saved to VMCB.state.rax by hardware on VMEXIT;
+         * the CPU register holds the restored host RAX (vmcb_pa) instead. */
+        state->ss_guest_regs.rax = v->state.rax;
         svm_exit_dispatch(v, &state->ss_guest_regs, &state->ss_exit_count);
     }
 }

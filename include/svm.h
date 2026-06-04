@@ -71,7 +71,7 @@ struct __packed SvmSegment {
 /* Real-mode attrib values (P=1, S=1/0, DPL=0, type) */
 #define SVM_ATTRIB_REALMODE_CODE    0x009B  /* P, S, type=0xB (exec/read/acc) */
 #define SVM_ATTRIB_REALMODE_DATA    0x0093  /* P, S, type=0x3 (data r/w acc)  */
-#define SVM_ATTRIB_TR               0x0083  /* P, S=0, type=3 (16-bit TSS)    */
+#define SVM_ATTRIB_TR               0x008B  /* P, S=0, type=0xB (32-bit TSS busy) — AMD requires 32-bit */
 #define SVM_ATTRIB_LDTR             0x0082  /* P, S=0, type=2 (LDT)           */
 #define SVM_ATTRIB_UNUSABLE         0x0000  /* P=0 → unusable                 */
 
@@ -102,7 +102,7 @@ struct __packed SvmControl {
     uint8_t  _pad1[0x10];       /* 0x098 – 0x0A7 */
     uint64_t event_inject;      /* 0x0A8 */
     uint64_t n_cr3;             /* 0x0B0  nested page table root PA */
-    uint8_t  _pad2[0x2E8];      /* 0x0B8 – 0x3FF */
+    uint8_t  _pad2[0x348];      /* 0x0B8 – 0x3FF */
 };                              /* total: 0x400 bytes */
 
 /* -----------------------------------------------------------------------
@@ -151,7 +151,7 @@ struct __packed SvmStateSave {
     uint64_t br_to;             /* 0x680 */
     uint64_t last_excp_from;    /* 0x688 */
     uint64_t last_excp_to;      /* 0x690 */
-    uint8_t  _pad6[0x370];      /* pad to 4KB total */
+    uint8_t  _pad6[0x968];      /* pad to 4KB total */
 };
 
 /* -----------------------------------------------------------------------
@@ -189,5 +189,10 @@ void svm_print_info(void);
  * npt.c
  * ----------------------------------------------------------------------- */
 uint64_t npt_build(void);
+
+/* Catch wrong padding at compile time */
+typedef char _svm_control_size_check  [sizeof(struct SvmControl)   == 0x400  ? 1 : -1];
+typedef char _svm_statesave_size_check[sizeof(struct SvmStateSave) == 0xC00  ? 1 : -1];
+typedef char _vmcb_size_check         [sizeof(struct Vmcb)         == 0x1000 ? 1 : -1];
 
 #endif /* SVM_H */

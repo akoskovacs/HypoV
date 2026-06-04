@@ -431,12 +431,123 @@ qemufs: hypov
 qemuiso: hypov.iso
 	$(Q)$(QEMU64) -serial stdio -cdrom $^
 
-# TCG (software emulation) with VMX exposed — no KVM/HVF needed, works on macOS
+# TCG with Intel VMX emulation
 qemutcg: hypov.iso
-	$(Q)$(QEMU64) -M q35 -cpu qemu64,+vmx -m 512 -serial stdio -cdrom $^
+	$(Q)$(QEMU64) -cpu qemu64,+vmx -m 512 -serial stdio -cdrom $^
 
 qemutcgdbg: hypov.iso
-	$(Q)$(QEMU64) -M q35 -cpu qemu64,+vmx -m 512 -serial stdio -cdrom $^ -S -s
+	$(Q)$(QEMU64) -cpu qemu64,+vmx -m 512 -serial stdio -cdrom $^ -S -s
+
+# TCG with AMD SVM emulation (works on macOS without KVM)
+qemusvm: hypov.iso
+	$(Q)$(QEMU64) -cpu EPYC -m 512 -serial stdio -cdrom $^
+
+qemusvmdbg: hypov.iso
+	$(Q)$(QEMU64) -cpu EPYC -m 512 -serial stdio -cdrom $^ -S -s
+
+# Proof ISO: a minimal Linux kernel + hyp_check as the sole init process.
+# No login, no cloud-init — boots straight to "Running under HypoV!".
+# HypoV loads via -kernel so the CD slot is free for the proof ISO.
+#
+# Requires: gcc (static), wget, cpio, gzip, xorriso, grub-pc-bin/grub-common
+#
+PROOF_KERNEL_URL := http://tinycorelinux.net/15.x/x86_64/release/distribution_files/vmlinuz64
+
+tools/guest/hyp_check: tools/guest/hyp_check.c
+	$(Q)gcc -static -o $@ $< 2>/dev/null && echo "  CC      $@" || \
+	    x86_64-linux-musl-gcc -static -o $@ $< 2>/dev/null && echo "  CC      $@ (musl)" || \
+	    { echo "ERROR: no Linux cross-compiler found."; \
+	      echo "  On Linux:  gcc -static is available natively."; \
+	      echo "  On macOS:  brew install FiloSottile/musl-cross/musl-cross"; \
+	      exit 1; }
+
+proof-initrd.img: tools/guest/hyp_check
+	$(Q)rm -rf /tmp/hypv_root && mkdir -p /tmp/hypv_root
+	$(Q)cp tools/guest/hyp_check /tmp/hypv_root/hyp_check
+	$(Q)printf '#!/bin/sh\nmount -t devtmpfs devtmpfs /dev 2>/dev/null || true\n/hyp_check\necho "---"\nwhile true; do sleep 60; done\n' \
+	    > /tmp/hypv_root/init
+	$(Q)chmod +x /tmp/hypv_root/init
+	$(Q)mkdir -p /tmp/hypv_root/dev /tmp/hypv_root/proc /tmp/hypv_root/sys
+	$(Q)cd /tmp/hypv_root && find . | cpio -o -H newc 2>/dev/null | gzip > $(CURDIR)/$@
+	@echo "  INITRD  $@"
+
+vmlinuz64:
+	wget -O $@ $(PROOF_KERNEL_URL)
+
+proof.iso: vmlinuz64 proof-initrd.img
+	$(Q)mkdir -p /tmp/proof-iso/boot/grub
+	$(Q)cp vmlinuz64 /tmp/proof-iso/boot/
+	$(Q)cp proof-initrd.img /tmp/proof-iso/boot/
+	$(Q)printf 'set timeout=0\nset default=0\nmenuentry "HypoV Proof" {\n  linux /boot/vmlinuz64 quiet console=ttyS0\n  initrd /boot/proof-initrd.img\n}\n' \
+	    > /tmp/proof-iso/boot/grub/grub.cfg
+	$(Q)grub-mkrescue -o $@ /tmp/proof-iso 2>/dev/null
+	@echo "  ISO     $@ (hyp_check boots as guest init)"
+
+# Boot HypoV, then guest boots proof.iso — hyp_check runs on first console line
+qemoproof: hypov proof.iso
+	$(Q)$(QEMU64) -cpu EPYC -m 512 \
+	    -kernel $(BINARY_TARGET) \
+	    -cdrom proof.iso \
+	    -serial stdio
+
+# CirrOS: tiny cloud-testing image with known default credentials.
+# Login: cirros / gocubsgo  (no setup, no cloud-init, works immediately)
+CIRROS_IMG ?= cirros.img
+CIRROS_URL := https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img
+
+download-cirros:
+	wget -O $(CIRROS_IMG) $(CIRROS_URL)
+
+qemucirros: hypov $(CIRROS_IMG)
+	$(Q)$(QEMU64) -cpu EPYC -m 512 \
+	    -drive file=$(CIRROS_IMG),if=ide,index=0 \
+	    -drive file=hypov.iso,media=cdrom,if=ide,index=1 \
+	    -serial stdio
+
+# Alpine 3.19 guest (~100MB) — login: vagrant / vagrant
+# Run 'make setup-guest' once to install gcc (persisted to disk).
+GUEST_BOX_URL := https://vagrantcloud.com/generic/boxes/alpine319/versions/4.3.12/providers/libvirt/amd64/download/vagrant.box
+GUEST_IMG     ?= guest.qcow2
+
+$(GUEST_IMG):
+	@echo "Downloading Alpine 3.19 guest (~100MB)..."
+	wget -O /tmp/guest.box $(GUEST_BOX_URL)
+	tar -xf /tmp/guest.box box.img
+	mv box.img $@
+	rm /tmp/guest.box
+	@echo "  IMG     $@ (login: vagrant / vagrant)"
+
+SSH_OPTS := -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=2
+
+# One-time setup: install gcc and copy hyp_check.c, then open SSH shell
+setup-guest:
+	@test -f /tmp/vagrant_key || \
+	    curl -sL https://raw.githubusercontent.com/hashicorp/vagrant/main/keys/vagrant \
+	    -o /tmp/vagrant_key && chmod 600 /tmp/vagrant_key
+	@echo "Waiting for SSH..."
+	@until ssh $(SSH_OPTS) -i /tmp/vagrant_key vagrant@localhost true 2>/dev/null; do sleep 2; done
+	@echo "Fixing DNS (QEMU internal DNS unreachable through HypoV; using 8.8.8.8)..."
+	ssh $(SSH_OPTS) -i /tmp/vagrant_key vagrant@localhost \
+	    "echo 'nameserver 8.8.8.8' | sudo tee /etc/resolv.conf > /dev/null"
+	@echo "Installing gcc (one-time, persisted to disk)..."
+	ssh $(SSH_OPTS) -i /tmp/vagrant_key vagrant@localhost "sudo apk add gcc musl-dev"
+	scp $(SSH_OPTS) -i /tmp/vagrant_key tools/guest/hyp_check.c vagrant@localhost:~
+	@echo "Done. Connecting..."
+	ssh $(SSH_OPTS) -i /tmp/vagrant_key vagrant@localhost
+
+qemuguest: hypov $(GUEST_IMG)
+	@pkill -f "$(GUEST_IMG)" 2>/dev/null || true
+	@echo "┌─────────────────────────────────────────┐"
+	@echo "│  HypoV guest: Alpine Linux               │"
+	@echo "│  Login:  vagrant  │  Password: vagrant   │"
+	@echo "│  SSH:    ssh -p 2222 vagrant@localhost   │"
+	@echo "└─────────────────────────────────────────┘"
+	$(Q)$(QEMU64) -cpu EPYC -m 512 \
+	    -boot order=dc \
+	    -drive file=$(GUEST_IMG),if=ide,index=0 \
+	    -drive file=hypov.iso,media=cdrom,if=ide,index=1 \
+	    -nic user,model=e1000,hostfwd=tcp::2222-:22 \
+	    -serial stdio
 
 qemudbg: hypov.iso
 	$(Q)$(QEMU64) -serial stdio -cdrom $^ -S -s
@@ -470,7 +581,7 @@ $(sort $(hypov-all)): $(hypov-dirs) ;
 
 #PHONY += $(vmlinux-dirs)
 #$(vmlinux-dirs): prepare scripts
-PHONY += $(hypov-dirs) iso bochs qemu qemufs qemutcg qemutcgdbg mkfs upfs
+PHONY += $(hypov-dirs) iso bochs qemu qemufs qemutcg qemutcgdbg qemusvm qemusvmdbg qemoproof qemucirros download-cirros qemuguest setup-guest mkfs upfs
 $(hypov-dirs): scripts_basic
 	$(Q)$(MAKE) $(build)=$@
 

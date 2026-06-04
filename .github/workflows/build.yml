@@ -97,7 +97,7 @@ jobs:
         if: steps.kvm.outputs.kvm == 'true'
         run: |
           timeout 30 qemu-system-x86_64 \
-            -enable-kvm -cpu host -m 512 -M q35 \
+            -enable-kvm -cpu host -m 512 \
             -boot d -cdrom hypov.iso \
             -serial file:serial.log \
             -display none \
