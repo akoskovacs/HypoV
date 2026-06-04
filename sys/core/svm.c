@@ -191,11 +191,13 @@ static void handle_svm_io(struct Vmcb *v, struct GuestRegisters *regs)
         uint64_t val = 0xFFFFFFFF;
         if      (info & SVM_IOIO_SZ8)  val = inb(port);
         else if (info & SVM_IOIO_SZ16) val = inw(port);
+        else if (info & SVM_IOIO_SZ32) val = inl(port);
         regs->rax    = val;
         v->state.rax = val;
     } else {
         if      (info & SVM_IOIO_SZ8)  outb(port, (uint8_t)regs->rax);
         else if (info & SVM_IOIO_SZ16) outw(port, (uint16_t)regs->rax);
+        else if (info & SVM_IOIO_SZ32) outl(port, (uint32_t)regs->rax);
     }
     svm_skip_instruction(v);
 }
@@ -324,6 +326,7 @@ void svm_run_guest(struct SvmState *state)
     hv_printf(display, "Launching guest...\n");
 
     while (1) {
+        v->control.exit_code = SVM_EXIT_INVALID;
         svm_vmrun(vmcb_pa, &state->ss_guest_regs);
         /* Guest RAX is auto-saved to VMCB.state.rax by hardware on VMEXIT;
          * the CPU register holds the restored host RAX (vmcb_pa) instead. */
@@ -338,10 +341,13 @@ static int  svm_ops_enable(void)     { return svm_enable(&svm_state); }
 static void svm_ops_print_info(void) { svm_print_info(); }
 static void svm_ops_run_guest(void)  { svm_run_guest(&svm_state); }
 
-const struct HvOperations svm_ops = {
-    .name          = "AMD SVM",
-    .check_support = svm_check_support,
-    .print_info    = svm_ops_print_info,
-    .enable        = svm_ops_enable,
-    .run_guest     = svm_ops_run_guest,
-};
+struct HvOperations svm_ops;
+
+void svm_backend_init(struct HvOperations *ops)
+{
+    ops->name          = "AMD SVM";
+    ops->check_support = svm_check_support;
+    ops->print_info    = svm_ops_print_info;
+    ops->enable        = svm_ops_enable;
+    ops->run_guest     = svm_ops_run_guest;
+}

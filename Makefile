@@ -357,7 +357,12 @@ loader: stage0/stage0
 # The all: target is the default when no target is given on the
 # command line.
 
-all: hypov loader
+all: sys/core/boot_stub.h hypov loader
+
+sys/core/boot_stub.h: sys/core/boot_stub.asm
+	$(Q)$(YASM) -f bin -o sys/core/boot_stub.bin $<
+	$(Q)xxd -i sys/core/boot_stub.bin | sed 's/sys_core_boot_stub_bin/boot_stub_bytes/g' > $@
+	@echo "  GEN     $@"
 # 32bit parts
 objs-y		:= sys boot 
 # Separate compilations of the libraries for 32 and 64 bit code
@@ -445,49 +450,48 @@ qemusvm: hypov.iso
 qemusvmdbg: hypov.iso
 	$(Q)$(QEMU64) -cpu EPYC -m 512 -serial stdio -cdrom $^ -S -s
 
-# Proof ISO: a minimal Linux kernel + hyp_check as the sole init process.
-# No login, no cloud-init — boots straight to "Running under HypoV!".
-# HypoV loads via -kernel so the CD slot is free for the proof ISO.
-#
-# Requires: gcc (static), wget, cpio, gzip, xorriso, grub-pc-bin/grub-common
+# Guest proof: hyp_check compiled as a Linux init, runs inside the SVM guest.
+# GRUB shows a 3s menu — host auto-boots HypoV; in the guest, press 1.
+# Works with: make qemuproof (QEMU/SVM) or make bochsproof (Bochs/VMX)
 #
 PROOF_KERNEL_URL := http://tinycorelinux.net/15.x/x86_64/release/distribution_files/vmlinuz64
 
 tools/guest/hyp_check: tools/guest/hyp_check.c
-	$(Q)gcc -static -o $@ $< 2>/dev/null && echo "  CC      $@" || \
-	    x86_64-linux-musl-gcc -static -o $@ $< 2>/dev/null && echo "  CC      $@ (musl)" || \
-	    { echo "ERROR: no Linux cross-compiler found."; \
-	      echo "  On Linux:  gcc -static is available natively."; \
-	      echo "  On macOS:  brew install FiloSottile/musl-cross/musl-cross"; \
-	      exit 1; }
+	$(Q)gcc -static -o $@ $< 2>/dev/null && echo "  CC (native)  $@" || \
+	    x86_64-linux-musl-gcc -static -o $@ $< 2>/dev/null && echo "  CC (musl)    $@" || \
+	    docker run --rm --platform linux/amd64 -v "$(CURDIR)/tools/guest:/work" alpine:latest \
+	        sh -c "apk add -q gcc musl-dev && gcc -static -o /work/hyp_check /work/hyp_check.c" \
+	        && echo "  CC (docker)  $@" || \
+	    { echo "ERROR: need gcc, x86_64-linux-musl-gcc, or Docker"; exit 1; }
 
 proof-initrd.img: tools/guest/hyp_check
-	$(Q)rm -rf /tmp/hypv_root && mkdir -p /tmp/hypv_root
+	$(Q)rm -rf /tmp/hypv_root && mkdir -p /tmp/hypv_root/dev /tmp/hypv_root/proc /tmp/hypv_root/sys
 	$(Q)cp tools/guest/hyp_check /tmp/hypv_root/hyp_check
-	$(Q)printf '#!/bin/sh\nmount -t devtmpfs devtmpfs /dev 2>/dev/null || true\n/hyp_check\necho "---"\nwhile true; do sleep 60; done\n' \
-	    > /tmp/hypv_root/init
-	$(Q)chmod +x /tmp/hypv_root/init
-	$(Q)mkdir -p /tmp/hypv_root/dev /tmp/hypv_root/proc /tmp/hypv_root/sys
+	$(Q)printf '#!/bin/sh\nmount -t devtmpfs devtmpfs /dev 2>/dev/null || true\n/hyp_check\nwhile true; do sleep 60; done\n' \
+	    > /tmp/hypv_root/init && chmod +x /tmp/hypv_root/init
 	$(Q)cd /tmp/hypv_root && find . | cpio -o -H newc 2>/dev/null | gzip > $(CURDIR)/$@
 	@echo "  INITRD  $@"
 
 vmlinuz64:
 	wget -O $@ $(PROOF_KERNEL_URL)
 
-proof.iso: vmlinuz64 proof-initrd.img
-	$(Q)mkdir -p /tmp/proof-iso/boot/grub
-	$(Q)cp vmlinuz64 /tmp/proof-iso/boot/
-	$(Q)cp proof-initrd.img /tmp/proof-iso/boot/
-	$(Q)printf 'set timeout=0\nset default=0\nmenuentry "HypoV Proof" {\n  linux /boot/vmlinuz64 quiet console=ttyS0\n  initrd /boot/proof-initrd.img\n}\n' \
-	    > /tmp/proof-iso/boot/grub/grub.cfg
-	$(Q)grub-mkrescue -o $@ /tmp/proof-iso 2>/dev/null
-	@echo "  ISO     $@ (hyp_check boots as guest init)"
+hypov-proof.iso: hypov proof-initrd.img vmlinuz64
+	$(Q)mkdir -p /tmp/hproof/boot/grub
+	$(Q)cp $(BINARY_TARGET) /tmp/hproof/boot/hypov.bin
+	$(Q)cp vmlinuz64 /tmp/hproof/boot/
+	$(Q)cp proof-initrd.img /tmp/hproof/boot/
+	$(Q)printf 'set timeout=3\nset default=0\n\nmenuentry "HypoV" {\n    multiboot /boot/hypov.bin\n    boot\n}\n\nmenuentry "hyp_check (run inside HypoV guest)" {\n    linux /boot/vmlinuz64 quiet console=ttyS0\n    initrd /boot/proof-initrd.img\n    boot\n}\n' \
+	    > /tmp/hproof/boot/grub/grub.cfg
+	$(Q)$(GRUB_MKRESCUE) -o $@ /tmp/hproof 2>/dev/null
+	@echo "  ISO     $@"
+	@echo "  Usage:  make qemuproof"
+	@echo "  Host:   GRUB auto-boots HypoV after 3s"
+	@echo "  Guest:  press 1 to run hyp_check inside the hypervisor"
 
-# Boot HypoV, then guest boots proof.iso — hyp_check runs on first console line
-qemoproof: hypov proof.iso
+qemuproof: hypov hypov-proof.iso
+	@echo "When GRUB appears the SECOND time (inside the guest), press 1."
 	$(Q)$(QEMU64) -cpu EPYC -m 512 \
-	    -kernel $(BINARY_TARGET) \
-	    -cdrom proof.iso \
+	    -cdrom hypov-proof.iso \
 	    -serial stdio
 
 # CirrOS: tiny cloud-testing image with known default credentials.
@@ -507,14 +511,14 @@ qemucirros: hypov $(CIRROS_IMG)
 # Alpine 3.19 guest (~100MB) — login: vagrant / vagrant
 # Run 'make setup-guest' once to install gcc (persisted to disk).
 GUEST_BOX_URL := https://vagrantcloud.com/generic/boxes/alpine319/versions/4.3.12/providers/libvirt/amd64/download/vagrant.box
-GUEST_IMG     ?= guest.qcow2
+GUEST_IMG     ?= alpine-guest.qcow2
 
 $(GUEST_IMG):
 	@echo "Downloading Alpine 3.19 guest (~100MB)..."
 	wget -O /tmp/guest.box $(GUEST_BOX_URL)
 	tar -xf /tmp/guest.box box.img
-	mv box.img $@
-	rm /tmp/guest.box
+	qemu-img convert -O qcow2 box.img $@
+	rm /tmp/guest.box box.img
 	@echo "  IMG     $@ (login: vagrant / vagrant)"
 
 SSH_OPTS := -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=2
@@ -536,13 +540,18 @@ setup-guest:
 	ssh $(SSH_OPTS) -i /tmp/vagrant_key vagrant@localhost
 
 qemuguest: hypov $(GUEST_IMG)
+	@if [ "$$(uname)" = "Darwin" ]; then \
+	    echo "ERROR: qemuguest requires Linux with KVM (real SVM/VMX hardware)."; \
+	    echo "       Use 'make qemusvm' on macOS to test basic SVM interception."; \
+	    exit 1; \
+	fi
 	@pkill -f "$(GUEST_IMG)" 2>/dev/null || true
 	@echo "┌─────────────────────────────────────────┐"
-	@echo "│  HypoV guest: Alpine Linux               │"
-	@echo "│  Login:  vagrant  │  Password: vagrant   │"
-	@echo "│  SSH:    ssh -p 2222 vagrant@localhost   │"
+	@echo "│  HypoV guest: Alpine Linux              │"
+	@echo "│  Login:  vagrant  │  Password: vagrant  │"
+	@echo "│  SSH:    ssh -p 2222 vagrant@localhost  │"
 	@echo "└─────────────────────────────────────────┘"
-	$(Q)$(QEMU64) -cpu EPYC -m 512 \
+	$(Q)$(QEMU64) -enable-kvm -cpu host -m 512 \
 	    -boot order=dc \
 	    -drive file=$(GUEST_IMG),if=ide,index=0 \
 	    -drive file=hypov.iso,media=cdrom,if=ide,index=1 \
@@ -554,6 +563,13 @@ qemudbg: hypov.iso
 
 bochs: hypov
 	$(Q)$(BOCHS)
+
+# Proof via Bochs (Intel VMX path — works on macOS without KVM).
+# When GRUB appears the second time (inside the guest), press 1.
+# Serial output in debug_serial.txt
+bochsproof: hypov-proof.iso
+	@sed 's|hypov\.iso|hypov-proof.iso|g' bochsrc > /tmp/bochsrc-proof
+	$(Q)$(BOCHS) -q -f /tmp/bochsrc-proof
 
 # The resulting ISO image could be both used for CD and pendrive installs
 # with ISO to pendrive image converters
@@ -581,7 +597,7 @@ $(sort $(hypov-all)): $(hypov-dirs) ;
 
 #PHONY += $(vmlinux-dirs)
 #$(vmlinux-dirs): prepare scripts
-PHONY += $(hypov-dirs) iso bochs qemu qemufs qemutcg qemutcgdbg qemusvm qemusvmdbg qemoproof qemucirros download-cirros qemuguest setup-guest mkfs upfs
+PHONY += $(hypov-dirs) iso bochs bochsproof qemu qemufs qemutcg qemutcgdbg qemusvm qemusvmdbg qemuproof qemucirros download-cirros qemuguest setup-guest mkfs upfs
 $(hypov-dirs): scripts_basic
 	$(Q)$(MAKE) $(build)=$@
 

@@ -13,9 +13,8 @@
 
 extern struct CharacterDisplay debug_serial;
 
-#define NPT_NR_ENTRIES   512
-#define NPT_MAP_MB       512
-#define NPT_MAP_PAGES    (NPT_MAP_MB * 1024 / 2)  /* 256 × 2MB pages */
+#define NPT_NR_ENTRIES  512
+#define NPT_NR_PDPTS    4       /* 4 × 1GB = 4GB */
 
 /* Standard x86 page table flags */
 #define NPT_PRESENT  (1ULL << 0)
@@ -26,7 +25,7 @@ extern struct CharacterDisplay debug_serial;
 
 static uint64_t npt_pml4[NPT_NR_ENTRIES] __aligned_4k;
 static uint64_t npt_pdpt[NPT_NR_ENTRIES] __aligned_4k;
-static uint64_t npt_pd[NPT_NR_ENTRIES]   __aligned_4k;
+static uint64_t npt_pd[NPT_NR_PDPTS][NPT_NR_ENTRIES] __aligned_4k;
 
 uint64_t npt_build(void)
 {
@@ -34,15 +33,15 @@ uint64_t npt_build(void)
     bzero(npt_pdpt, sizeof(npt_pdpt));
     bzero(npt_pd,   sizeof(npt_pd));
 
-    for (int i = 0; i < NPT_MAP_PAGES; i++) {
-        uint64_t pa = (uint64_t)i << 21;
-        npt_pd[i] = pa | NPT_LARGE | NPT_RWX;
+    for (int g = 0; g < NPT_NR_PDPTS; g++) {
+        for (int i = 0; i < NPT_NR_ENTRIES; i++) {
+            uint64_t pa = ((uint64_t)g << 30) | ((uint64_t)i << 21);
+            npt_pd[g][i] = pa | NPT_LARGE | NPT_RWX;
+        }
+        npt_pdpt[g] = (uint64_t)npt_pd[g] | NPT_RWX;
     }
-
-    npt_pdpt[0] = (uint64_t)npt_pd   | NPT_RWX;
     npt_pml4[0] = (uint64_t)npt_pdpt | NPT_RWX;
 
-    hv_printf(&debug_serial, "NPT: built, root=%x, %dMB mapped\n",
-              npt_pml4, NPT_MAP_MB);
+    hv_printf(&debug_serial, "NPT: built, root=%x, 4GB mapped\n", npt_pml4);
     return (uint64_t)npt_pml4;
 }

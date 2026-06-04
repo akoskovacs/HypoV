@@ -20,8 +20,12 @@ struct HvOperations {
 /* Detect and return the appropriate backend, or NULL if unsupported */
 const struct HvOperations *hv_detect_backend(void);
 
-/* Defined in vmx.c and svm.c respectively */
-extern const struct HvOperations vmx_ops;
-extern const struct HvOperations svm_ops;
+/* Zero-initialised in .bss; call vmx_backend_init / svm_backend_init before use. */
+extern struct HvOperations vmx_ops;
+extern struct HvOperations svm_ops;
+
+/* Fill in function pointers at runtime (avoids .data section loading issues). */
+void vmx_backend_init(struct HvOperations *ops);
+void svm_backend_init(struct HvOperations *ops);
 
 #endif /* HV_OPS_H */

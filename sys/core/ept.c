@@ -3,7 +3,7 @@
  * | Copyright (C) Ákos Kovács - 2026                           |
  * |                                                            |
  * | Extended Page Tables (EPT) — 1:1 guest-physical to         |
- * | host-physical mapping, 2MB pages, first 512MB of RAM       |
+ * | host-physical mapping, 2MB pages, first 4GB               |
  * +------------------------------------------------------------+
  */
 #include <memory.h>
@@ -13,35 +13,38 @@
 
 extern struct CharacterDisplay debug_serial;
 
-#define EPT_NR_ENTRIES 512
-#define EPT_MAP_MB 512                        /* map first 512MB */
-#define EPT_MAP_PAGES (EPT_MAP_MB * 1024 / 2) /* in 2MB pages = 256 */
+#define EPT_NR_ENTRIES  512
+#define EPT_NR_PDPTS    4       /* 4 × 1GB = 4GB */
+
+/* UC memory type for EPT leaf entries (bits 5:3 = 0) */
+#define EPT_MEMTYPE_UC  (0ULL << 3)
 
 static uint64_t ept_pml4[EPT_NR_ENTRIES] __aligned_4k;
 static uint64_t ept_pdpt[EPT_NR_ENTRIES] __aligned_4k;
-static uint64_t ept_pd[EPT_NR_ENTRIES] __aligned_4k;
+static uint64_t ept_pd[EPT_NR_PDPTS][EPT_NR_ENTRIES] __aligned_4k;
 
-uint64_t ept_build(void)
+uint64_t ept_build(bool enable_ad)
 {
     bzero(ept_pml4, sizeof(ept_pml4));
     bzero(ept_pdpt, sizeof(ept_pdpt));
-    bzero(ept_pd, sizeof(ept_pd));
+    bzero(ept_pd,   sizeof(ept_pd));
 
-    /* Map each 2MB page: guest-physical == host-physical (identity) */
-    for (int i = 0; i < EPT_MAP_PAGES; i++)
-    {
-        uint64_t pa = (uint64_t)i << 21; /* i * 2MB */
-        ept_pd[i] = pa | EPT_LARGE_PAGE | EPT_RWX | EPT_MEMTYPE_WB;
+    for (int g = 0; g < EPT_NR_PDPTS; g++) {
+        for (int i = 0; i < EPT_NR_ENTRIES; i++) {
+            uint64_t pa = ((uint64_t)g << 30) | ((uint64_t)i << 21);
+            /* VGA framebuffer and legacy MMIO hole: uncached */
+            uint64_t mt = (pa >= 0xA0000 && pa < 0x100000)
+                          ? EPT_MEMTYPE_UC : EPT_MEMTYPE_WB;
+            ept_pd[g][i] = pa | EPT_LARGE_PAGE | EPT_RWX | mt;
+        }
+        ept_pdpt[g] = (uint64_t)ept_pd[g] | EPT_RWX;
     }
-
-    /* PDPT[0] → PD covering first 1GB */
-    ept_pdpt[0] = (uint64_t)ept_pd | EPT_RWX;
-
-    /* PML4[0] → PDPT covering first 512GB */
     ept_pml4[0] = (uint64_t)ept_pdpt | EPT_RWX;
 
     uint64_t eptp = (uint64_t)ept_pml4 | EPTP_MEMTYPE_WB | EPTP_PAGE_WALK_4;
+    if (enable_ad)
+        eptp |= EPTP_ENABLE_AD;
 
-    hv_printf(&debug_serial, "EPT: built, EPTP=%x, %dMB mapped\n", eptp, EPT_MAP_MB);
+    hv_printf(&debug_serial, "EPT: built, EPTP=%x, 4GB mapped\n", eptp);
     return eptp;
 }

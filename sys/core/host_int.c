@@ -65,14 +65,35 @@ void hv_handle_interrupt(struct TrapFrame *frame)
         return;
     }
 
-    /* CPU exceptions */
-    const char *int_msg = "Unknown";
-    if (inum < (int)(sizeof(cpu_exceptions)/sizeof(char *))) {
-        int_msg = cpu_exceptions[inum];
+    /* CPU exceptions — use switch to avoid relocation issues with pointer arrays */
+    const char *int_msg;
+    switch (inum) {
+    case 0:  int_msg = "Divide by Zero";           break;
+    case 1:  int_msg = "Debug";                    break;
+    case 2:  int_msg = "NMI";                      break;
+    case 3:  int_msg = "Breakpoint";               break;
+    case 4:  int_msg = "Overflow";                 break;
+    case 5:  int_msg = "Bound Range";              break;
+    case 6:  int_msg = "Invalid Opcode (#UD)";     break;
+    case 7:  int_msg = "Device Not Available";     break;
+    case 8:  int_msg = "Double Fault";             break;
+    case 10: int_msg = "Invalid TSS";              break;
+    case 11: int_msg = "Segment Not Present";      break;
+    case 12: int_msg = "Stack Fault";              break;
+    case 13: int_msg = "General Protection";       break;
+    case 14: int_msg = "Page Fault";               break;
+    default: int_msg = "Unknown";                  break;
     }
 
-    hv_printf(&debug_serial, "Exception: %s (%d), error code: %d\n",
-        int_msg, inum, frame->error_code);
-    hv_printf(display, "Exception: %s (%d), error: %d\n",
-        int_msg, inum, frame->error_code);
+    /* RIP is on the stack just past the TrapFrame */
+    unsigned long rip = *((unsigned long *)(frame + 1));
+
+    hv_printf(&debug_serial, "EXCEPTION %d (%s) rip=%x:%x err=%d\n",
+        inum, int_msg, (unsigned)(rip >> 32), (unsigned)rip, (int)frame->error_code);
+    hv_printf(display, "EXCEPTION %d (%s) err=%ld\n",
+        inum, int_msg, frame->error_code);
+
+    /* CPU exceptions are fatal — halt to avoid infinite re-entry loops */
+    while (1)
+        __asm__ __volatile__("hlt");
 }

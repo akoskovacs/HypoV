@@ -17,6 +17,7 @@
 
 extern void os_error_stub(void);
 void cpu_init_tables(void);
+extern unsigned long __get_relocation_offset(void);
 
 struct ConsoleDisplay  main_display;
 struct CharacterDisplay *display = (struct CharacterDisplay *)&main_display;
@@ -29,14 +30,22 @@ const struct HvOperations *hv_detect_backend(void)
 {
     int32_t regs[4];
 
-    cpuid(0x1, regs);
-    if (regs[CPUID_REG_ECX] & (1 << 5))
-        return &vmx_ops;   /* Intel VT-x */
+    /* Check CPU vendor first — hypervisors (e.g. Hyper-V on Azure) may set
+     * vendor-specific CPUID bits that look like VMX/SVM on the wrong vendor. */
+    cpuid(0x0, regs);
+    int32_t vendor_ebx = regs[1]; /* "Genu" for Intel, "Auth" for AMD */
 
-    cpuid(0x80000001, regs);
-    if (regs[CPUID_REG_ECX] & (1 << 2))
-        return &svm_ops;   /* AMD SVM */
+    if (vendor_ebx == 0x756e6547) { /* Intel: "GenuineIntel" */
+        cpuid(0x1, regs);
+        if (regs[CPUID_REG_ECX] & (1 << 5))
+            return &vmx_ops;
+    } else if (vendor_ebx == 0x68747541) { /* AMD: "AuthenticAMD" */
+        cpuid(0x80000001, regs);
+        if (regs[CPUID_REG_ECX] & (1 << 2))
+            return &svm_ops;
+    }
 
+    hv_printf(&debug_serial, "CPU vendor=%x — no VMX/SVM\n", vendor_ebx);
     return NULL;
 }
 
@@ -64,6 +73,11 @@ void hv_start(uint32_t arg)
     hv_printf(display, "HypoV 64-bit hypervisor core\n\n");
     hv_printf(&debug_serial, "HypoV hv_start()\n");
 
+    /* Fill ops structs via code — static .data initializers are not
+     * reliably loaded by the 32-bit ELF bootstrap. */
+    vmx_backend_init(&vmx_ops);
+    svm_backend_init(&svm_ops);
+
     const struct HvOperations *ops = hv_detect_backend();
     if (!ops) {
         hv_printf(display, "Error: no hardware virtualization support\n");
@@ -72,6 +86,7 @@ void hv_start(uint32_t arg)
     }
 
     hv_printf(display, "Backend: %s\n", ops->name);
+    hv_printf(&debug_serial, "Backend: %s\n", ops->name);
 
     if (ops->check_support() != 0)
         goto halt;
@@ -81,11 +96,11 @@ void hv_start(uint32_t arg)
         goto halt;
     }
 
-    ops->print_info();  /* print after enable so capabilities are populated */
+    ops->print_info();
 
     ops->run_guest();  /* does not return on success */
 
 halt:
     while (1)
-        ;
+        __asm__ __volatile__("hlt");
 }

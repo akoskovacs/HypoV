@@ -6,7 +6,7 @@ subdir-ccflags-y += -mno-red-zone
 subdir-ldflags-y := -Wl$(comma)-melf_x86_64
 yasmflags-y := -felf64
 
-always := hvcore.lds
+always := hvcore.lds boot_stub.h
 hvobj-y += head.o
 hvobj-y += hvisor.o
 hvobj-y += elf_os_stub.o

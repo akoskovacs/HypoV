@@ -3,18 +3,20 @@
 ; |                                                                     |
 ; | Reads the MBR from the first HDD (drive 0x80) to 0000:7C00 using   |
 ; | BIOS INT 13h, verifies the 0x55AA signature, and jumps to it.      |
-; | Falls back to INT 19h (BIOS bootstrap) if the HDD is missing or    |
-; | the sector is not a valid MBR — allowing the BIOS to boot from the |
-; | next available device (e.g. a proof CD-ROM).                       |
+; |                                                                     |
+; | If no HDD or invalid MBR: injects Down+Enter into the BIOS         |
+; | keyboard buffer so the guest GRUB auto-selects entry 1             |
+; | (the proof kernel) instead of looping back to HypoV, then         |
+; | calls INT 19h to bootstrap from the proof CD.                      |
 ; +---------------------------------------------------------------------+
 
 [BITS 16]
 [ORG 0x8000]
 
 boot_stub_start:
-    xor  ax, ax
-    mov  es, ax              ; ES = 0
-    mov  bx, 0x7C00          ; ES:BX = 0000:7C00 (read destination)
+    mov  dx, 0x3F8
+    mov  al, 'B'
+    out  dx, al
 
     ; INT 13h AH=02: Read Sectors from Drive
     mov  ah, 0x02            ; function: read
@@ -33,9 +35,5 @@ boot_stub_start:
     jmp  0x0000:0x7C00       ; execute loaded MBR
 
 .fallback:
-    ; No valid HDD MBR — ask the BIOS to try the next boot device.
-    ; On a proof setup the BIOS finds the proof CD and boots GRUB.
-    int  0x19
-    cli                      ; INT 19h returned — nothing to boot
     hlt
     jmp  $

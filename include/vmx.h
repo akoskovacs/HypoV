@@ -472,7 +472,7 @@ void vmx_print_info(struct VmxCapabilities *caps);
 int vmcs_init(struct VmxState *state);
 
 /* ept.c */
-uint64_t ept_build(void);
+uint64_t ept_build(bool enable_ad);
 
 /* vmx_exit.c */
 void vmx_exit_handler(struct GuestRegisters *regs);

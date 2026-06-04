@@ -84,6 +84,20 @@ uint16_t inw(uint16_t port)
     return value;
 }
 
+static inline
+void outl(uint16_t port, uint32_t value)
+{
+    __asm__ __volatile__("outl %0, %1" : : "a"(value), "Nd"(port));
+}
+
+static inline
+uint32_t inl(uint16_t port)
+{
+    uint32_t value;
+    __asm__ __volatile__("inl %1, %0" : "=a"(value) : "Nd"(port));
+    return value;
+}
+
 #if 0
 static inline bool is_irq_on()
 {

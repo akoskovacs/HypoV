@@ -70,7 +70,7 @@ int vmx_read_capabilities(struct VmxCapabilities *caps)
         PIN_EXT_INT_EXITING | PIN_NMI_EXITING, pin_msr);
 
     caps->vc_proc_ctls = vmx_adjust_controls(
-        PROC_RDTSC_EXITING | PROC_ACTIVATE_SECONDARY, proc_msr);
+        PROC_RDTSC_EXITING | PROC_HLT_EXITING | PROC_ACTIVATE_SECONDARY, proc_msr);
 
     /* Check secondary controls availability */
     caps->vc_proc_ctls2 = 0;
@@ -156,6 +156,17 @@ int vmx_enable(struct VmxState *state)
     cr4 &= msr_read(MSR_IA32_VMX_CR4_FIXED1);
     cr4_write64(cr4);
 
+    /* Verify VMXE was actually accepted (KVM may silently drop the bit) */
+    uint64_t cr4_actual = cr4_read64();
+    hv_printf(&debug_serial, "VMX: CR4=%x VMXE=%d feature_ctl=%x\n",
+              (unsigned)cr4_actual, !!(cr4_actual & CR4_VMXE),
+              (unsigned)msr_read(0x3A /* IA32_FEATURE_CONTROL */));
+    if (!(cr4_actual & CR4_VMXE)) {
+        hv_printf(&debug_serial, "VMX: CR4.VMXE not set — nested VMX unavailable\n");
+        hv_printf(display, "VMX: CR4.VMXE not set\n");
+        return -1;
+    }
+
     /* Enter VMX root operation */
     uint64_t vmxon_pa = (uint64_t)state->vs_vmxon; /* identity mapped: VA == PA */
     if (vmx_on(&vmxon_pa) != 0)
@@ -182,17 +193,40 @@ static int  vmx_ops_enable(void)
 static void vmx_ops_print_info(void) { vmx_print_info(&vmx_state.vs_caps); }
 static void vmx_ops_run_guest(void)
 {
-    uint64_t eptp = ept_build();
-    if (eptp && vmx_state.vs_caps.vc_ept)
-        vmx_write(VMCS_EPT_POINTER, eptp);
+    if (vmx_state.vs_caps.vc_unrestricted_guest) {
+        /* Real-mode guest: copy boot stub to 0x8000, VMCS sets RIP=0x7C00 */
+        #include "boot_stub.h"
+        volatile uint8_t *dst = (volatile uint8_t *)0x8000;
+        const uint8_t    *src = boot_stub_bytes;
+        unsigned int      i;
+        for (i = 0; i < boot_stub_bytes_len; i++)
+            dst[i] = src[i];
+    } else {
+        /* Fallback: 64-bit vmcall proof stub at guest physical 0x1000 */
+        volatile uint8_t *s = (volatile uint8_t *)0x1000;
+        uint32_t sig = (uint32_t)HV_HYPERCALL_SIGNATURE;
+        s[0]=0xB8;                              /* mov eax, imm32 */
+        s[1]=(sig>>0)&0xFF; s[2]=(sig>>8)&0xFF;
+        s[3]=(sig>>16)&0xFF; s[4]=(sig>>24)&0xFF;
+        s[5]=0x0F; s[6]=0x01; s[7]=0xC1;       /* vmcall */
+        s[8]=0xF4;                              /* hlt */
+        s[9]=0xEB; s[10]=0xFD;                 /* jmp $-1 */
+    }
     vmcs_init(&vmx_state);
+    hv_printf(&debug_serial, "VMX: launching guest\n");
     vmx_launch();
 }
 
-const struct HvOperations vmx_ops = {
-    .name          = "Intel VT-x",
-    .check_support = vmx_check_support,
-    .print_info    = vmx_ops_print_info,
-    .enable        = vmx_ops_enable,
-    .run_guest     = vmx_ops_run_guest,
-};
+/* Zero-initialized (.bss) — filled at runtime by vmx_backend_init()
+ * to avoid relying on .data static initializers which the ELF loader
+ * may not populate correctly. */
+struct HvOperations vmx_ops;
+
+void vmx_backend_init(struct HvOperations *ops)
+{
+    ops->name          = "Intel VT-x";
+    ops->check_support = vmx_check_support;
+    ops->print_info    = vmx_ops_print_info;
+    ops->enable        = vmx_ops_enable;
+    ops->run_guest     = vmx_ops_run_guest;
+}
