@@ -308,34 +308,15 @@ void svm_run_guest(struct SvmState *state)
     struct Vmcb *v = state->ss_vmcb;
     uint64_t vmcb_pa = (uint64_t)v;   /* identity mapped: VA == PA */
 
-    /*
-     * Stub at 0x8000: reads the first sector of the first HDD (drive 0x80)
-     * to 0000:7C00 using BIOS INT 13h, then jumps to it.
-     *
-     * INT 13h is already live — the BIOS set it up before HypoV loaded.
-     * This mirrors real-hardware use: HypoV boots from USB, takes control,
-     * then transparently boots the OS already on the hard drive.
-     */
+    /* Copy the guest boot stub to physical address 0x8000.
+     * Source: sys/core/boot_stub.asm (assembled to boot_stub.h by make). */
+    #include "boot_stub.h"
     {
-        volatile uint8_t *s = (volatile uint8_t *)0x8000;
-        s[0]=0x31; s[1]=0xC0;               /* xor ax, ax          */
-        s[2]=0x8E; s[3]=0xC0;               /* mov es, ax          */
-        s[4]=0xBB; s[5]=0x00; s[6]=0x7C;   /* mov bx, 0x7C00      */
-        s[7]=0xB4; s[8]=0x02;               /* mov ah, 2           */
-        s[9]=0xB0; s[10]=0x01;              /* mov al, 1           */
-        s[11]=0xB5; s[12]=0x00;             /* mov ch, 0           */
-        s[13]=0xB1; s[14]=0x01;             /* mov cl, 1           */
-        s[15]=0xB6; s[16]=0x00;             /* mov dh, 0           */
-        s[17]=0xB2; s[18]=0x80;             /* mov dl, 0x80 (HDD)  */
-        s[19]=0xCD; s[20]=0x13;             /* int 0x13            */
-        s[21]=0x72; s[22]=0x05;             /* jc fail (+5 bytes)  */
-        s[23]=0xEA; s[24]=0x00; s[25]=0x7C; /* jmp far 0:0x7C00   */
-        s[26]=0x00; s[27]=0x00;
-        /* fail: no HDD — fall back to INT 19h (bootstrap from CD)   */
-        s[28]=0xCD; s[29]=0x19;             /* fail: int 0x19      */
-        s[30]=0xFA;                          /* cli (if 19h returns)*/
-        s[31]=0xF4;                          /* hlt                 */
-        s[32]=0xEB; s[33]=0xFD;             /* jmp $-1             */
+        volatile uint8_t *dst = (volatile uint8_t *)0x8000;
+        const uint8_t    *src = boot_stub_bytes;
+        unsigned int      i;
+        for (i = 0; i < boot_stub_bytes_len; i++)
+            dst[i] = src[i];
     }
 
     hv_printf(&debug_serial, "SVM: booting guest OS from HDD via INT 13h\n");

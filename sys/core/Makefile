@@ -26,5 +26,12 @@ hvobj-y += svm_ll.o
 hvobj-y += npt.o
 hvobj-y += drivers/
 
-sys/core/int_wrappers.asm: 
+sys/core/int_wrappers.asm:
 	$(Q)$(RUBY) scripts/intgen.rb $@
+
+# Assemble the 16-bit guest boot stub to a flat binary, then generate
+# a C header with the byte array so svm.c can copy it to guest memory.
+sys/core/boot_stub.h: sys/core/boot_stub.asm
+	$(Q)$(YASM) -f bin -o sys/core/boot_stub.bin $<
+	$(Q)xxd -i sys/core/boot_stub.bin | sed 's/sys_core_boot_stub_bin/boot_stub_bytes/g' > $@
+	@echo "  GEN     $@"
