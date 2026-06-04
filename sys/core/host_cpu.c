@@ -26,6 +26,10 @@ static struct GDTEntry   gdt_table[NR_HV_GDT_ELEMS] __aligned_16;
 static struct IDT64Entry idt_table[NR_HV_INTERRUPTS] __aligned_16;
 static struct TSS64      tss_sys_64 __aligned_16;
 
+uint64_t cpu_get_gdt_base(void) { return (uint64_t)gdt_table; }
+uint64_t cpu_get_idt_base(void) { return (uint64_t)idt_table; }
+uint64_t cpu_get_tss_base(void) { return (uint64_t)&tss_sys_64; }
+
 /* Create TSS entry inside the GDT. Note that it needs 2 normal GDT entries, since it's a 64 bit entry. */
 void gdt_make_tss_entry(struct GDTEntry *ent, uint64_t base, uint32_t limit, uint32_t flags)
 {

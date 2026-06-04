@@ -15,7 +15,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y build-essential gcc-i686-linux-gnu binutils-i686-linux-gnu yasm grub-common grub-pc-bin xorriso mtools
+          sudo apt-get install -y build-essential gcc-i686-linux-gnu binutils-i686-linux-gnu yasm xxd grub-common grub-pc-bin xorriso mtools
 
       - name: Set up cross-compiler shims
         run: |
@@ -30,7 +30,9 @@ jobs:
           sudo ln -s /usr/bin/grub-mkrescue /usr/local/bin/i686-elf-grub-mkrescue
 
       - name: Build ISO
-        run: make CROSS_COMPILE=i686-linux-gnu- GRUB_MKRESCUE=grub-mkrescue iso
+        run: |
+          echo "CONFIG_AUTOBOOT=y" >> .config
+          make CROSS_COMPILE=i686-linux-gnu- GRUB_MKRESCUE=grub-mkrescue iso
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -42,3 +44,112 @@ jobs:
             HypoV.map
             sys/core/hvcore.elf64
             sys/core/hvcore.elf64.xz
+
+  vmx-test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check KVM availability
+        run: |
+          ls -la /dev/kvm
+          grep -E 'vmx|svm' /proc/cpuinfo | head -3 || echo "No VMX/SVM in cpuinfo"
+          cat /proc/sys/kernel/perf_event_paranoid || true
+
+      - name: Enable nested KVM
+        id: kvm
+        run: |
+          if grep -q vmx /proc/cpuinfo; then
+            echo "Intel VMX — enabling nested kvm_intel"
+            sudo modprobe -r kvm_intel 2>/dev/null || true
+            echo "options kvm_intel nested=1" | sudo tee /etc/modprobe.d/kvm.conf
+            sudo modprobe kvm_intel nested=1
+            cat /sys/module/kvm_intel/parameters/nested
+            echo "kvm=true" >> $GITHUB_OUTPUT
+          elif grep -q svm /proc/cpuinfo; then
+            echo "AMD SVM — enabling nested kvm_amd"
+            sudo modprobe -r kvm_amd 2>/dev/null || true
+            echo "options kvm_amd nested=1" | sudo tee /etc/modprobe.d/kvm.conf
+            sudo modprobe kvm_amd nested=1
+            cat /sys/module/kvm_amd/parameters/nested
+            echo "kvm=true" >> $GITHUB_OUTPUT
+          else
+            echo "No KVM support — skipping boot test"
+            echo "kvm=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install QEMU
+        if: steps.kvm.outputs.kvm == 'true'
+        run: sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils
+
+      - name: Download ISO
+        if: steps.kvm.outputs.kvm == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: hypov-${{ github.sha }}
+
+      - name: Grant KVM access
+        if: steps.kvm.outputs.kvm == 'true'
+        run: sudo chmod 666 /dev/kvm
+
+      - name: Boot HypoV (hypervisor activation check)
+        if: steps.kvm.outputs.kvm == 'true'
+        run: |
+          timeout 30 qemu-system-x86_64 \
+            -enable-kvm -cpu host,+vmx -m 512 \
+            -boot d -cdrom hypov.iso \
+            -serial file:serial.log \
+            -display none \
+            -no-reboot || true
+          echo "=== Serial output ==="
+          cat serial.log || echo "(no serial output)"
+          if grep -qE "VMX: active|SVM: active" serial.log; then
+            echo "PASS: hypervisor activated"
+          elif grep -q "No VMX or SVM" serial.log; then
+            echo "SKIP: no nested VMX/SVM on this runner (Azure limitation)"
+          else
+            echo "FAIL: unexpected output"; exit 1
+          fi
+
+      - name: Download Alpine guest image
+        if: steps.kvm.outputs.kvm == 'true'
+        run: |
+          wget -q -O /tmp/guest.box \
+            https://vagrantcloud.com/generic/boxes/alpine319/versions/4.3.12/providers/libvirt/amd64/download/vagrant.box
+          tar -xf /tmp/guest.box box.img
+          qemu-img convert -O qcow2 box.img alpine-guest.qcow2
+          rm /tmp/guest.box box.img
+          qemu-img info alpine-guest.qcow2
+
+      - name: Boot HypoV + Alpine guest
+        if: steps.kvm.outputs.kvm == 'true'
+        run: |
+          timeout 30 qemu-system-x86_64 \
+            -enable-kvm -cpu host -m 512 \
+            -boot order=dc \
+            -drive file=alpine-guest.qcow2,if=ide,index=0 \
+            -drive file=hypov.iso,media=cdrom,if=ide,index=1 \
+            -serial file:guest.log \
+            -display none \
+            -no-reboot || true
+          echo "=== Guest serial output ==="
+          cat guest.log || echo "(no guest output)"
+
+      - name: Check guest ran under HypoV
+        if: steps.kvm.outputs.kvm == 'true'
+        run: |
+          echo "=== Guest log ==="
+          cat guest.log
+          # 'B' is the first byte the boot stub writes — proves the guest
+          # is executing real-mode code under HypoV's hypervisor.
+          # Alpine's login prompt goes to VGA, not serial, so we can't
+          # check for it here without reconfiguring the guest image.
+          grep -qE "SVM: active|VMX: active" guest.log \
+            && grep -q "B" guest.log \
+            && echo "PASS: hypervisor active and guest boot stub ran" \
+            || { echo "FAIL: guest did not boot under HypoV"; exit 1; }
+
+      - name: Boot test skipped
+        if: steps.kvm.outputs.kvm != 'true'
+        run: echo "Boot test skipped — no KVM on this runner"

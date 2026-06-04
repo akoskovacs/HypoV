@@ -11,19 +11,46 @@
 #include <interrupt.h>
 #include <print.h>
 #include <system.h>
+#include <vmx.h>
+#include <svm.h>
+#include <hv_ops.h>
 
 extern void os_error_stub(void);
 void cpu_init_tables(void);
+extern unsigned long __get_relocation_offset(void);
 
-struct ConsoleDisplay main_display;
+struct ConsoleDisplay  main_display;
 struct CharacterDisplay *display = (struct CharacterDisplay *)&main_display;
-struct CharacterDisplay debug_serial;
+struct CharacterDisplay  debug_serial;
+
+extern struct VmxState vmx_state;
+extern struct SvmState svm_state;
+
+const struct HvOperations *hv_detect_backend(void)
+{
+    int32_t regs[4];
+
+    /* Check CPU vendor first — hypervisors (e.g. Hyper-V on Azure) may set
+     * vendor-specific CPUID bits that look like VMX/SVM on the wrong vendor. */
+    cpuid(0x0, regs);
+    int32_t vendor_ebx = regs[1]; /* "Genu" for Intel, "Auth" for AMD */
+
+    if (vendor_ebx == 0x756e6547) { /* Intel: "GenuineIntel" */
+        cpuid(0x1, regs);
+        if (regs[CPUID_REG_ECX] & (1 << 5))
+            return &vmx_ops;
+    } else if (vendor_ebx == 0x68747541) { /* AMD: "AuthenticAMD" */
+        cpuid(0x80000001, regs);
+        if (regs[CPUID_REG_ECX] & (1 << 2))
+            return &svm_ops;
+    }
+
+    hv_printf(&debug_serial, "CPU vendor=%x — no VMX/SVM\n", vendor_ebx);
+    return NULL;
+}
 
 void hv_start(uint32_t arg)
 {
-    int out_times = 10;
-
-    /* No arguments, we must be executed from an OS, hopefully Linux :D */
 #ifdef CONFIG_HV_OS_STUB
     if (arg == 0x0) {
         os_error_stub();
@@ -37,31 +64,43 @@ void hv_start(uint32_t arg)
 
     hv_serial_init(&debug_serial);
     hv_disp_setup(&debug_serial);
-    const char hello[] = "hello";
-    int n = hv_printf(&debug_serial, "Hypervisor hv_start() entry at \n");
-    bochs_breakpoint();
-    hv_printf(&debug_serial, "hello = %s\n", hello);
-    hv_printf(&debug_serial, "n = %d\n", n);
-    n = hv_printf(&debug_serial, "%x%x\n", hv_start);
-    hv_printf(&debug_serial, "n = %d\n", n);
-    //hv_printf(&debug_serial, "Display pointer %X\n", display);
-
     hv_console_display_init(&main_display);
     hv_disp_setup(display);
     hv_set_stdout(display);
     hv_console_set_attribute(&main_display, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT);
     hv_console_set_xy(&main_display, 0, 0);
-    bochs_breakpoint();
-    //hv_console_puts_xya(&main_display, 0, 1, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT, "HELLO!!!");
 
-    int i = 0;
-    while (i < out_times) {
-        hv_disp_puts_xy(display, 0, i, "64 bit hypervisor startup...\n");
-        i++;
+    hv_printf(display, "HypoV 64-bit hypervisor core\n\n");
+    hv_printf(&debug_serial, "HypoV hv_start()\n");
+
+    /* Fill ops structs via code — static .data initializers are not
+     * reliably loaded by the 32-bit ELF bootstrap. */
+    vmx_backend_init(&vmx_ops);
+    svm_backend_init(&svm_ops);
+
+    const struct HvOperations *ops = hv_detect_backend();
+    if (!ops) {
+        hv_printf(display, "Error: no hardware virtualization support\n");
+        hv_printf(&debug_serial, "No VMX or SVM found\n");
+        goto halt;
     }
 
-    while (1) {
-        //halt();
-        ;
+    hv_printf(display, "Backend: %s\n", ops->name);
+    hv_printf(&debug_serial, "Backend: %s\n", ops->name);
+
+    if (ops->check_support() != 0)
+        goto halt;
+
+    if (ops->enable() != 0) {
+        hv_printf(display, "Error: backend enable failed\n");
+        goto halt;
     }
+
+    ops->print_info();
+
+    ops->run_guest();  /* does not return on success */
+
+halt:
+    while (1)
+        __asm__ __volatile__("hlt");
 }
