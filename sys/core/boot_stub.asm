@@ -18,6 +18,11 @@ boot_stub_start:
     mov  al, 'B'
     out  dx, al
 
+    ; Set up read destination: ES:BX = 0000:7C00
+    xor  ax, ax
+    mov  es, ax
+    mov  bx, 0x7C00
+
     ; INT 13h AH=02: Read Sectors from Drive
     mov  ah, 0x02            ; function: read
     mov  al, 0x01            ; sector count: 1
@@ -35,5 +40,16 @@ boot_stub_start:
     jmp  0x0000:0x7C00       ; execute loaded MBR
 
 .fallback:
+    ; No bootable HDD — stuff Down+Enter into BIOS keyboard buffer so
+    ; the guest GRUB auto-selects entry 1 (hyp_check proof kernel).
+    mov  ah, 0x05
+    mov  cx, 0x5000          ; Down arrow: scan=0x50, ascii=0x00
+    int  0x16
+    mov  ah, 0x05
+    mov  cx, 0x1C0D          ; Enter: scan=0x1C, ascii=0x0D
+    int  0x16
+    ; Bootstrap from the next device (the proof CD-ROM)
+    int  0x19
+    ; INT 19h returned — nothing else to try
     hlt
     jmp  $

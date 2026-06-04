@@ -11,6 +11,7 @@ tags
 *.bin
 *.cmd
 *.lds
+!sys/core/hvcore.lds
 *.xz
 *.elf
 *.elf64
@@ -29,3 +30,6 @@ scripts/kconfig/conf
 scripts/kconfig/lex.zconf.c
 scripts/kconfig/zconf.hash.c
 scripts/kconfig/zconf.tab.c
+docs/
+sys/core/boot_stub.bin
+sys/core/boot_stub.h

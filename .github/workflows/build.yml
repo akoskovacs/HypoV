@@ -34,12 +34,48 @@ jobs:
           echo "CONFIG_AUTOBOOT=y" >> .config
           make CROSS_COMPILE=i686-linux-gnu- GRUB_MKRESCUE=grub-mkrescue iso
 
+      - name: Build guest test disk
+        run: |
+          # Compile hyp_check (runs inside the guest as Linux init)
+          gcc -static -o tools/guest/hyp_check tools/guest/hyp_check.c
+
+          # Build the proof initrd (hyp_check as /init)
+          make proof-initrd.img
+
+          # Download a small kernel for the guest OS
+          wget -q -O vmlinuz64 \
+            http://tinycorelinux.net/15.x/x86_64/release/distribution_files/vmlinuz64
+
+          # Create a 32MB raw disk: MBR + one ext4 partition
+          dd if=/dev/zero of=test-guest.raw bs=1M count=32 status=none
+          echo ',,83,*' | sfdisk test-guest.raw
+
+          # Mount via loop device and install GRUB + kernel + initrd
+          LOOP=$(sudo losetup -f --show -P test-guest.raw)
+          sudo mkfs.ext4 -F -q "${LOOP}p1"
+          sudo mkdir -p /mnt/testdisk
+          sudo mount "${LOOP}p1" /mnt/testdisk
+          sudo mkdir -p /mnt/testdisk/boot/grub
+          sudo cp vmlinuz64 proof-initrd.img /mnt/testdisk/boot/
+          printf 'set timeout=0\nset default=0\nmenuentry "hyp_check" {\n    linux /boot/vmlinuz64 quiet console=ttyS0\n    initrd /boot/proof-initrd.img\n}\n' \
+            | sudo tee /mnt/testdisk/boot/grub/grub.cfg > /dev/null
+          sudo grub-install \
+            --target=i386-pc \
+            --boot-directory=/mnt/testdisk/boot \
+            --modules="normal part_msdos ext2 linux" \
+            "$LOOP" 2>/dev/null
+          sudo umount /mnt/testdisk
+          sudo losetup -d "$LOOP"
+          # Keep as raw — QEMU handles raw disk images directly
+          mv test-guest.raw test-guest.img
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: hypov-${{ github.sha }}
           path: |
             hypov.iso
+            test-guest.img
             hypov.bin
             HypoV.map
             sys/core/hvcore.elf64
@@ -112,43 +148,25 @@ jobs:
             echo "FAIL: unexpected output"; exit 1
           fi
 
-      - name: Download Alpine guest image
+      - name: Boot HypoV (CD) + test OS (disk) and run hyp_check
         if: steps.kvm.outputs.kvm == 'true'
         run: |
-          wget -q -O /tmp/guest.box \
-            https://vagrantcloud.com/generic/boxes/alpine319/versions/4.3.12/providers/libvirt/amd64/download/vagrant.box
-          tar -xf /tmp/guest.box box.img
-          qemu-img convert -O qcow2 box.img alpine-guest.qcow2
-          rm /tmp/guest.box box.img
-          qemu-img info alpine-guest.qcow2
-
-      - name: Boot HypoV + Alpine guest
-        if: steps.kvm.outputs.kvm == 'true'
-        run: |
-          timeout 30 qemu-system-x86_64 \
+          # HypoV boots from CD.  The guest OS (GRUB + Linux + hyp_check)
+          # boots from the test disk built in the build job.
+          # hyp_check does vmcall/vmmcall; HypoV intercepts and responds.
+          timeout 60 qemu-system-x86_64 \
             -enable-kvm -cpu host -m 512 \
-            -boot order=dc \
-            -drive file=alpine-guest.qcow2,if=ide,index=0 \
+            -drive file=test-guest.img,format=raw,if=ide,index=0 \
             -drive file=hypov.iso,media=cdrom,if=ide,index=1 \
+            -boot order=dc \
             -serial file:guest.log \
             -display none \
             -no-reboot || true
           echo "=== Guest serial output ==="
           cat guest.log || echo "(no guest output)"
-
-      - name: Check guest ran under HypoV
-        if: steps.kvm.outputs.kvm == 'true'
-        run: |
-          echo "=== Guest log ==="
-          cat guest.log
-          # 'B' is the first byte the boot stub writes — proves the guest
-          # is executing real-mode code under HypoV's hypervisor.
-          # Alpine's login prompt goes to VGA, not serial, so we can't
-          # check for it here without reconfiguring the guest image.
-          grep -qE "SVM: active|VMX: active" guest.log \
-            && grep -q "B" guest.log \
-            && echo "PASS: hypervisor active and guest boot stub ran" \
-            || { echo "FAIL: guest did not boot under HypoV"; exit 1; }
+          grep -q "Running under HypoV" guest.log \
+            && echo "PASS: hyp_check confirmed running under HypoV from disk" \
+            || { echo "FAIL: did not see hyp_check output"; exit 1; }
 
       - name: Boot test skipped
         if: steps.kvm.outputs.kvm != 'true'
