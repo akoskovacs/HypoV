@@ -174,7 +174,11 @@ int vmx_enable(struct VmxState *state)
 
 /* HvOperations backend for Intel VT-x */
 
-static int  vmx_ops_enable(void)     { return vmx_enable(&vmx_state); }
+static int  vmx_ops_enable(void)
+{
+    if (vmx_read_capabilities(&vmx_state.vs_caps) != 0) return -1;
+    return vmx_enable(&vmx_state);
+}
 static void vmx_ops_print_info(void) { vmx_print_info(&vmx_state.vs_caps); }
 static void vmx_ops_run_guest(void)
 {

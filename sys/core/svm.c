@@ -328,12 +328,14 @@ void svm_run_guest(struct SvmState *state)
         s[15]=0xB6; s[16]=0x00;             /* mov dh, 0           */
         s[17]=0xB2; s[18]=0x80;             /* mov dl, 0x80 (HDD)  */
         s[19]=0xCD; s[20]=0x13;             /* int 0x13            */
-        s[21]=0x72; s[22]=0x05;             /* jc fail             */
+        s[21]=0x72; s[22]=0x05;             /* jc fail (+5 bytes)  */
         s[23]=0xEA; s[24]=0x00; s[25]=0x7C; /* jmp far 0:0x7C00   */
         s[26]=0x00; s[27]=0x00;
-        s[28]=0xFA;                          /* fail: cli           */
-        s[29]=0xF4;                          /* hlt                 */
-        s[30]=0xEB; s[31]=0xFC;             /* jmp $-2             */
+        /* fail: no HDD — fall back to INT 19h (bootstrap from CD)   */
+        s[28]=0xCD; s[29]=0x19;             /* fail: int 0x19      */
+        s[30]=0xFA;                          /* cli (if 19h returns)*/
+        s[31]=0xF4;                          /* hlt                 */
+        s[32]=0xEB; s[33]=0xFD;             /* jmp $-1             */
     }
 
     hv_printf(&debug_serial, "SVM: booting guest OS from HDD via INT 13h\n");

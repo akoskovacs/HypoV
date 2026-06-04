@@ -76,12 +76,12 @@ void hv_start(uint32_t arg)
     if (ops->check_support() != 0)
         goto halt;
 
-    ops->print_info();
-
     if (ops->enable() != 0) {
         hv_printf(display, "Error: backend enable failed\n");
         goto halt;
     }
+
+    ops->print_info();  /* print after enable so capabilities are populated */
 
     ops->run_guest();  /* does not return on success */
 

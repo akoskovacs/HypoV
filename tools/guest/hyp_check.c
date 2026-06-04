@@ -1,13 +1,11 @@
 /*
- * hypv_check — HypoV guest proof tool
+ * hyp_check — HypoV guest proof tool
  *
  * Executes VMMCALL with the HypoV signature. If running under HypoV,
  * the hypervisor responds with a magic value and the VM exit count.
  *
- * Build inside Alpine:
- *   apk add gcc
- *   gcc -static -o hypv_check hypv_check.c
- *   ./hypv_check
+ * Build on Linux:  gcc -static -o hyp_check hyp_check.c && ./hyp_check
+ * Build on macOS:  make proof.iso  (uses Docker automatically)
  */
 #include <stdio.h>
 #include <stdint.h>
@@ -17,15 +15,13 @@
 
 int main(void)
 {
-    uint64_t rax = HV_SIGNATURE;
-    uint64_t rbx = 0;
-    uint64_t rcx = 0;
+    uint64_t rbx = 0, rcx = 0;
 
-    /* "0" ties the input rax to output operand 0 (rax), works on GCC and clang */
+    /* "a" = rax (input: signature), "=b" = rbx output, "=c" = rcx output */
     __asm__ __volatile__(
         "vmmcall"
-        : "=a"(rax), "=b"(rbx), "=c"(rcx)
-        : "0"(rax)
+        : "=b"(rbx), "=c"(rcx)
+        : "a"((uint64_t)HV_SIGNATURE)
         : "memory"
     );
 
