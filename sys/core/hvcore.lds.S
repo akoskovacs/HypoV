@@ -13,7 +13,10 @@ ENTRY(hv_entry_64)
 
 SECTIONS
 {
-    . = 16M;
+    /* Load at 128MB — above where the Linux guest kernel decompresses
+     * (typically 0x1000000 = 16MB), so the guest can't corrupt our
+     * NPT page tables which live in .bss near this base address. */
+    . = 128M;
     .text : ALIGN(4K)
     {
         *(.text)

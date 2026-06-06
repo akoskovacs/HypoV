@@ -178,7 +178,7 @@ int vmx_enable(struct VmxState *state)
         return -1;
     }
 
-    hv_printf(&debug_serial, "VMX: VMXON succeeded\n");
+    hv_printf(&debug_serial, "VMX: active\n");
     hv_printf(display, "VMX: active\n");
     return 0;
 }
