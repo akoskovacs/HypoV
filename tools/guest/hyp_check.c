@@ -1,14 +1,33 @@
 /*
  * hyp_check — HypoV guest proof tool
  *
+ * Designed to run as Linux /init inside the HypoV guest initramfs.
  * Detects Intel vs AMD and uses vmcall/vmmcall accordingly.
  * If running under HypoV the hypervisor responds with a magic value.
  */
 #include <stdio.h>
 #include <stdint.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/mount.h>
 
 #define HV_SIGNATURE  0x48594F56UL  /* "HYOV" */
 #define HV_MAGIC      0xDEADBEEFUL
+
+/* When running as PID 1 (Linux /init), the kernel can't open /dev/console
+ * until devtmpfs is mounted.  Mount it ourselves so printf reaches ttyS0. */
+static void setup_console(void)
+{
+    mount("devtmpfs", "/dev", "devtmpfs", 0, "");
+    int fd = open("/dev/console", O_RDWR);
+    if (fd < 0)
+        return;
+    dup2(fd, STDIN_FILENO);
+    dup2(fd, STDOUT_FILENO);
+    dup2(fd, STDERR_FILENO);
+    if (fd > 2)
+        close(fd);
+}
 
 static int is_intel(void)
 {
@@ -19,6 +38,8 @@ static int is_intel(void)
 
 int main(void)
 {
+    setup_console();
+
     uint64_t rbx = 0, rcx = 0;
 
     if (is_intel()) {
