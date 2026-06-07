@@ -41,8 +41,7 @@ int vmx_check_support(void)
 {
     int32_t regs[4];
     cpuid(0x1, regs);
-    /* ECX bit 5 = VMX (matches CPU_FEATURE_VMX which is bit 37 of the combined flag) */
-    if (!(regs[CPUID_REG_ECX] & (1 << 5)))
+    if (!(regs[CPUID_REG_ECX] & CPUID_FEATURE_VMX))
     {
         hv_printf(&debug_serial, "VMX: not supported on this CPU\n");
         hv_printf(display, "VMX: not supported\n");

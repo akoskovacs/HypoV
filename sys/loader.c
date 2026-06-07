@@ -211,17 +211,20 @@ struct Elf64_Image *ld_load_hvcore(struct MemoryMap *hvmap, int *error, void *im
 extern void __cpu_call_64(uint32_t addr, uint32_t arg0);
 extern int cpu_gdt_init(void);
 
-int ld_call_hvcore(struct SystemInfo *sysinfo)
+int ld_call_hvcore(struct SystemInfo *sysinfo, struct HvBootHandoff *handoff)
 {
-    if (sysinfo == NULL || sysinfo->s_core_map == NULL || sysinfo->s_core_image == NULL 
-        || sysinfo->s_core_image->i_entry == NULL) {
+    if (sysinfo == NULL || sysinfo->s_core_map == NULL || sysinfo->s_core_image == NULL
+        || sysinfo->s_core_image->i_entry == NULL || handoff == NULL) {
             return -HV_BADARG;
     }
 
     bochs_breakpoint();
-    uint32_t sys_addr  = (uint32_t)sysinfo;
-    uint32_t func_addr = (uint32_t)sysinfo->s_core_image->i_entry;
+    /* Hand hvcore the ABI-safe HvBootHandoff, not struct SystemInfo —
+     * SystemInfo's pointer members change width across the 32/64bit
+     * boundary, so hvcore can't interpret it directly. */
+    uint32_t handoff_addr = (uint32_t)handoff;
+    uint32_t func_addr    = (uint32_t)sysinfo->s_core_image->i_entry;
     //hv_printf(stdout, "Calling into 64bit at %x\n", func_addr);
-    __cpu_call_64(func_addr, sys_addr);
+    __cpu_call_64(func_addr, handoff_addr);
     return 0;
 }

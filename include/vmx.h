@@ -447,6 +447,11 @@ static inline void cr0_write64(uint64_t v)
     __asm__ __volatile__("movq %0, %%cr0" : : "r"(v));
 }
 
+static inline void cr3_write64(uint64_t v)
+{
+    __asm__ __volatile__("movq %0, %%cr3" : : "r"(v) : "memory");
+}
+
 /* -----------------------------------------------------------------------
  * Function declarations
  * ----------------------------------------------------------------------- */

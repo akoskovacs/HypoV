@@ -428,27 +428,27 @@ hypov: $(hypov-all) $(HVCORE_OBJ)
 	$(Q)$(CHECK_MBOOT) $@.bin && echo "OK" || echo "FAIL"
 
 qemu: hypov
-	$(Q)$(QEMU64) -serial stdio -kernel $(BINARY_TARGET)
+	$(Q)$(QEMU64) -serial stdio -monitor none -kernel $(BINARY_TARGET)
 
 qemufs: hypov
-	$(Q)$(QEMU64) -serial stdio -hda testfs.img
+	$(Q)$(QEMU64) -serial stdio -monitor none -hda testfs.img
 
 qemuiso: hypov.iso
-	$(Q)$(QEMU64) -serial stdio -cdrom $^
+	$(Q)$(QEMU64) -cpu EPYC -m 512 -serial stdio -monitor none -cdrom $^
 
 # TCG with Intel VMX emulation
 qemutcg: hypov.iso
-	$(Q)$(QEMU64) -cpu qemu64,+vmx -m 512 -serial stdio -cdrom $^
+	$(Q)$(QEMU64) -cpu qemu64,+vmx -m 512 -serial stdio -monitor none -cdrom $^
 
 qemutcgdbg: hypov.iso
-	$(Q)$(QEMU64) -cpu qemu64,+vmx -m 512 -serial stdio -cdrom $^ -S -s
+	$(Q)$(QEMU64) -cpu qemu64,+vmx -m 512 -serial stdio -monitor none -cdrom $^ -S -s
 
 # TCG with AMD SVM emulation (works on macOS without KVM)
 qemusvm: hypov.iso
-	$(Q)$(QEMU64) -cpu EPYC -m 512 -serial stdio -cdrom $^
+	$(Q)$(QEMU64) -cpu EPYC -m 512 -serial stdio -monitor none -cdrom $^
 
 qemusvmdbg: hypov.iso
-	$(Q)$(QEMU64) -cpu EPYC -m 512 -serial stdio -cdrom $^ -S -s
+	$(Q)$(QEMU64) -cpu EPYC -m 512 -serial stdio -monitor none -cdrom $^ -S -s
 
 # Guest proof: hyp_check compiled as a Linux init, runs inside the SVM guest.
 # GRUB shows a 3s menu — host auto-boots HypoV; in the guest, press 1.
@@ -479,7 +479,7 @@ hypov-proof.iso: hypov proof-initrd.img vmlinuz64
 	$(Q)cp $(BINARY_TARGET) /tmp/hproof/boot/hypov.bin
 	$(Q)cp vmlinuz64 /tmp/hproof/boot/
 	$(Q)cp proof-initrd.img /tmp/hproof/boot/
-	$(Q)printf 'set timeout=3\nset default=0\n\nmenuentry "HypoV" {\n    multiboot /boot/hypov.bin\n    boot\n}\n\nmenuentry "hyp_check (run inside HypoV guest)" {\n    linux /boot/vmlinuz64 quiet console=ttyS0\n    initrd /boot/proof-initrd.img\n    boot\n}\n' \
+	$(Q)printf 'set timeout=5\nset default=0\n\nmenuentry "HypoV" {\n    multiboot /boot/hypov.bin\n    boot\n}\n\nmenuentry "hyp_check (run inside HypoV guest)" {\n    linux /boot/vmlinuz64 quiet console=ttyS0\n    initrd /boot/proof-initrd.img\n    boot\n}\n' \
 	    > /tmp/hproof/boot/grub/grub.cfg
 	$(Q)$(GRUB_MKRESCUE) -o $@ /tmp/hproof 2>/dev/null
 	@echo "  ISO     $@"
@@ -491,7 +491,7 @@ qemuproof: hypov hypov-proof.iso
 	@echo "When GRUB appears the SECOND time (inside the guest), press 1."
 	$(Q)$(QEMU64) -cpu EPYC -m 512 \
 	    -cdrom hypov-proof.iso \
-	    -serial stdio
+	    -serial stdio -monitor none
 
 # CirrOS: tiny cloud-testing image with known default credentials.
 # Login: cirros / gocubsgo  (no setup, no cloud-init, works immediately)
@@ -538,27 +538,22 @@ setup-guest:
 	@echo "Done. Connecting..."
 	ssh $(SSH_OPTS) -i /tmp/vagrant_key vagrant@localhost
 
-qemuguest: hypov $(GUEST_IMG)
-	@if [ "$$(uname)" = "Darwin" ]; then \
-	    echo "ERROR: qemuguest requires Linux with KVM (real SVM/VMX hardware)."; \
-	    echo "       Use 'make qemusvm' on macOS to test basic SVM interception."; \
-	    exit 1; \
-	fi
+qemuguest: hypov.iso $(GUEST_IMG)
 	@pkill -f "$(GUEST_IMG)" 2>/dev/null || true
 	@echo "┌─────────────────────────────────────────┐"
 	@echo "│  HypoV guest: Alpine Linux              │"
 	@echo "│  Login:  vagrant  │  Password: vagrant  │"
 	@echo "│  SSH:    ssh -p 2222 vagrant@localhost  │"
 	@echo "└─────────────────────────────────────────┘"
-	$(Q)$(QEMU64) -enable-kvm -cpu host -m 512 \
+	$(Q)$(QEMU64) -cpu EPYC -m 512 \
 	    -boot order=dc \
 	    -drive file=$(GUEST_IMG),if=ide,index=0 \
 	    -drive file=hypov.iso,media=cdrom,if=ide,index=1 \
 	    -nic user,model=e1000,hostfwd=tcp::2222-:22 \
-	    -serial stdio
+	    -serial stdio -monitor none
 
 qemudbg: hypov.iso
-	$(Q)$(QEMU64) -serial stdio -cdrom $^ -S -s
+	$(Q)$(QEMU64) -serial stdio -monitor none -cdrom $^ -S -s
 
 bochs: hypov
 	$(Q)$(BOCHS)

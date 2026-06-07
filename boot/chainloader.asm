@@ -15,15 +15,6 @@ section .chainloader.text
 align 4
 
 bits 32
-prot_disable:
-    mov eax, cr0
-    xor eax, 0x1 
-    mov cr0, eax
-    nop
-    nop
-    nop
-    nop
-ret
 
 resetpic:                                  ; reset 8259 master and slave pic vectors
     push ax                                ; expects bh = master vector, bl = slave vector
@@ -72,7 +63,7 @@ bits 16
     nop
     nop
     nop
-;    call prot_disable
+    xchg bx, bx ; Bochs breakpoint
     mov sp, 0x8000
     ; The GDT segment selectors are not valid anymore
 #if 1
@@ -96,8 +87,6 @@ reset_disk:
     mov ah, 0x00 ; reset function
     mov dl, 0x80 ; 1. hard disk drive
     int 0x13
-    call prot_disable
-    xchg bx, bx
     jc reset_disk
     ; Load the boot sector at 0x0000:0x7c00
     mov bx, 0x0000
@@ -111,7 +100,6 @@ reset_disk:
     mov dh, 0x00 ; head
     mov dl, 0x80 ; drive
     int 0x13
-    call prot_disable
     jc .read_disk
     ; The boot sector might depend on the
     ; correct drive number

@@ -60,6 +60,9 @@ struct __packed TrapFrame {
 /* Pointer to the actual handler */
 typedef void (*hv_int_handler_ft)(void);
 
+/* Last IRQ vector captured by hv_handle_interrupt; consumed by the SVM exit handler */
+extern volatile uint8_t hv_pending_irq_vector;
+
 void idt64_make_entry(struct IDT64Entry *ent, bool is_trap, uint16_t seg, hv_int_handler_ft handler);
 void hv_handle_interrupt(struct TrapFrame *frame);
 

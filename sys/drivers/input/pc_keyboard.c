@@ -10,8 +10,6 @@
 #include <drivers/input/pc_keyboard.h>
 
 #define KBD_CMD_REBOOT 0xFE
-#define KBD_CMD  0x64
-#define KBD_PORT 0x60
 
 /* TODO... */
 #ifdef KBD_HAVE_UNICODE
@@ -74,18 +72,22 @@ static size_t kbd_keymap_size = KBD_HU_KEYMAP_SIZE;
 
 static void keyboard_flush(void)
 {
-    while (inb(KBD_CMD) & 1)
-        inb(KBD_PORT);
+    while (inb(KBC_CMD_PORT) & 1)
+        inb(KBC_DATA_PORT);
 }
 
 int keyboard_init(void)
 {
     bochs_breakpoint();
     keyboard_flush();
-    /* Set up the scan rate command */
-    outb(KBD_CMD, 0xF3);
+    /* Set up the scan rate command. 0xF3 (Set Typematic Rate/Delay) is a
+     * keyboard-device command: both the command byte and its parameter
+     * must go to the data port (0x60), not the controller command
+     * register (0x64) — writing 0xF3 there falls into the i8042's
+     * 0xF0-0xFF "Pulse Output Port" range and pulses a hardware reset. */
+    outb(KBC_DATA_PORT, 0xF3);
     /* 2Hz with 750ms delay */
-    outb(KBD_PORT, 0x2F);
+    outb(KBC_DATA_PORT, 0x2F);
     /* TODO: Check status code */
     return 0;
 }
@@ -112,8 +114,8 @@ char keyboard_get_scancode(void)
 {
     char c = 0;
     do {
-        if (inb(KBD_PORT) != c) {
-            c = inb(KBD_PORT);
+        if (inb(KBC_DATA_PORT) != c) {
+            c = inb(KBC_DATA_PORT);
             if (c > 0) {
                 keyboard_flush();
                 return c;
@@ -140,9 +142,9 @@ void sys_reboot(void)
     char good = 0x02;
     while (good & 0x02) {
         good = inb(0x64);
-        inb(KBD_PORT);
+        inb(KBC_DATA_PORT);
     }
-    outb(0x64, KBD_CMD_REBOOT);
+    outb(KBC_CMD_PORT, KBD_CMD_REBOOT);
 
     /* Halt anyway */
     forever {
