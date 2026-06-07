@@ -17,6 +17,7 @@ SECTIONS
      * (typically 0x1000000 = 16MB), so the guest can't corrupt our
      * NPT page tables which live in .bss near this base address. */
     . = 128M;
+    __hvcore_start = .;
     .text : ALIGN(4K)
     {
         *(.text)
@@ -46,4 +47,7 @@ SECTIONS
     {
         *(.common)
     }
+
+    . = ALIGN(4K);
+    __hvcore_end = .;
 }
