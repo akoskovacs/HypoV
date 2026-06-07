@@ -1,4 +1,8 @@
 {
+    "[c]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools"
+    },
+    "C_Cpp.clang_format_style": "file",
     "files.associations": {
         "fat32.h": "c",
         "types.h": "c",

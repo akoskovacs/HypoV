@@ -55,12 +55,16 @@ static char *cpu_exceptions[] = {
 };
 volatile static int i, j = 0;
 
+/* Captured by hv_handle_interrupt; consumed by the SVM INTR exit handler */
+volatile uint8_t hv_pending_irq_vector = 0;
+
 void hv_handle_interrupt(struct TrapFrame *frame)
 {
     int inum = frame->int_number;
 
     /* Hardware IRQs (PIC remapped to 0x20-0x2F) */
     if (inum >= 0x20 && inum < 0x30) {
+        hv_pending_irq_vector = (uint8_t)inum;
         pic_send_eoi(inum - 0x20);
         return;
     }

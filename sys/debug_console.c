@@ -249,6 +249,7 @@ static int dc_vmm_handle_key(struct DebugScreen *scr, char key)
 {
     int error = 0;
     void *elf_start = 0x0;
+    static struct HvBootHandoff handoff;
 
     int sz_image;
     if (key == KEY_R) {
@@ -287,7 +288,8 @@ static int dc_vmm_handle_key(struct DebugScreen *scr, char key)
         }
         dc_bottom_show_message(scr, "64bit mode activated...");
         dc_bottom_show_message(scr, "Starting the Hypervisor...");
-        ld_call_hvcore(sys_info);
+        mm_build_boot_handoff(sys_info, &handoff);
+        ld_call_hvcore(sys_info, &handoff);
     }
     KBD_DELAY();
     return 0;

@@ -85,7 +85,18 @@ enum CPU_FEATURE_FLAGS {
     CPU_FEATURE_RDRND      = (1ULL << 62),
     CPU_FEATURE_HVISOR     = (1ULL << 63)
 };
-    
+
+/* EAX = 1, ECX = ... */
+enum CPUID_FEATURE_ECX_FLAGS {
+    CPUID_FEATURE_VMX        = (1 << 5),  /* Virtual Machine Extensions (Intel VT-x) */
+    CPUID_FEATURE_HYPERVISOR = (1 << 31), /* Running under a hypervisor */
+};
+
+/* EAX = 0x80000001, ECX = ... */
+enum CPUID_EXT_FEATURE_ECX_FLAGS {
+    CPUID_EXT_FEATURE_SVM = (1 << 2), /* Secure Virtual Machine (AMD-V) */
+};
+
 enum CR0_FLAGS {
     CR0_PE  = (1ULL << 0), /* Protected mode enable */
     CR0_MP  = (1ULL << 1), /* Monitor co-processor */

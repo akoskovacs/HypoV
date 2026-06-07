@@ -10,6 +10,8 @@
 #include <string.h>
 #include <system.h>
 #include <interrupt.h>
+#include <memory.h>
+#include <vmx.h>
 
 /* Helper subroutines from host_cpu_ll.asm */
 extern unsigned long __get_relocation_offset(void);
@@ -76,4 +78,39 @@ void cpu_init_tables(void)
 {
     cpu_gdt_init();
     cpu_idt_init();
+}
+
+#define HOST_PT_NR_ENTRIES 512
+#define HOST_PT_NR_PDPTS   4   /* 4 x 1GB = 4GB, matches the NPT's coverage */
+
+/*
+ * hvcore's own flat identity-mapped page tables, stored as static arrays
+ * inside hvcore's loaded image — i.e. within [__hvcore_start, __hvcore_end),
+ * which npt_build() already marks not-present in the guest's NPT view. The
+ * guest can therefore never reach or corrupt these tables, unlike the 32bit
+ * loader's page tables (CR3≈0xb1b000) hvcore otherwise keeps running on,
+ * which sit in the same low physical memory the guest's own kernel/initrd
+ * are loaded into (NPT is a flat 1:1 identity map). See
+ * docs/SVM_HOST_PAGING_FIX.md for the full story.
+ */
+static pml4_t host_pml4[HOST_PT_NR_ENTRIES] __aligned_4k;
+static pml3_t host_pdpt[HOST_PT_NR_ENTRIES] __aligned_4k;
+static pml2_t host_pd[HOST_PT_NR_PDPTS][HOST_PT_NR_ENTRIES] __aligned_4k;
+
+void cpu_init_host_paging(void)
+{
+    bzero(host_pml4, sizeof(host_pml4));
+    bzero(host_pdpt, sizeof(host_pdpt));
+    bzero(host_pd,   sizeof(host_pd));
+
+    for (int g = 0; g < HOST_PT_NR_PDPTS; g++) {
+        for (int i = 0; i < HOST_PT_NR_ENTRIES; i++) {
+            uint64_t pa = ((uint64_t)g << PAGE_SHIFT_1G) | ((uint64_t)i << PAGE_SHIFT_2M);
+            host_pd[g][i] = pa | PML_PRESENT | PML_RW | PML_SUPER | PML2_PS;
+        }
+        host_pdpt[g] = (uint64_t)host_pd[g] | PML_PRESENT | PML_RW | PML_SUPER;
+    }
+    host_pml4[0] = (uint64_t)host_pdpt | PML_PRESENT | PML_RW | PML_SUPER;
+
+    cr3_write64((uint64_t)host_pml4);
 }

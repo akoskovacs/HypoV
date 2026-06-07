@@ -7,14 +7,14 @@
  */
 #include <cpu.h>
 #include <gdt.h>
-#include <system.h>
 #include <memory.h>
 #include <print.h>
 #include <string.h>
+#include <system.h>
 #include <vmx.h>
 
 extern struct CharacterDisplay debug_serial;
-extern unsigned long __get_relocation_offset(void);
+extern unsigned long           __get_relocation_offset(void);
 
 uint64_t cpu_get_gdt_base(void);
 uint64_t cpu_get_idt_base(void);
@@ -22,34 +22,6 @@ uint64_t cpu_get_tss_base(void);
 
 /* Dedicated stack for VM exit handling */
 static uint8_t vm_exit_stack[8192] __align(16);
-
-static inline uint16_t read_cs(void)
-{
-    uint16_t v;
-    __asm__ __volatile__("movw %%cs, %0" : "=r"(v));
-    return v;
-}
-
-static inline uint16_t read_ss(void)
-{
-    uint16_t v;
-    __asm__ __volatile__("movw %%ss, %0" : "=r"(v));
-    return v;
-}
-
-static inline uint16_t read_ds(void)
-{
-    uint16_t v;
-    __asm__ __volatile__("movw %%ds, %0" : "=r"(v));
-    return v;
-}
-
-static inline uint16_t read_tr(void)
-{
-    uint16_t v;
-    __asm__ __volatile__("str %0" : "=r"(v));
-    return v;
-}
 
 /* Write all VMCS host-state fields (our 64-bit hypervisor environment) */
 static void vmcs_write_host_state(struct VmxCapabilities *caps)
@@ -104,9 +76,9 @@ static void vmcs_write_guest_state(struct VmxCapabilities *caps)
 {
     uint64_t guest_cr0 = msr_read(MSR_IA32_VMX_CR0_FIXED0) & msr_read(MSR_IA32_VMX_CR0_FIXED1);
     if (!caps->vc_unrestricted_guest)
-        guest_cr0 |= CR0_PE;  /* protected mode required without URG */
+        guest_cr0 |= CR0_PE; /* protected mode required without URG */
     else
-        guest_cr0 &= ~(uint64_t)(CR0_PE | CR0_PG);  /* real mode with URG */
+        guest_cr0 &= ~(uint64_t)(CR0_PE | CR0_PG); /* real mode with URG */
     vmx_write(VMCS_GUEST_CR0, guest_cr0);
     vmx_write(VMCS_GUEST_CR3, 0);
 
@@ -159,8 +131,8 @@ static void vmcs_write_guest_state(struct VmxCapabilities *caps)
 
     if (caps->vc_unrestricted_guest) {
         /* Real mode: entry at boot stub (0x8000), which loads MBR -> 0x7C00 */
-        vmx_write(VMCS_GUEST_TR_AR,      VMCS_AR_PRESENT | 0xB);
-        vmx_write(VMCS_GUEST_TR_LIMIT,   0xFFFF);
+        vmx_write(VMCS_GUEST_TR_AR, VMCS_AR_PRESENT | 0xB);
+        vmx_write(VMCS_GUEST_TR_LIMIT, 0xFFFF);
         vmx_write(VMCS_GUEST_IDTR_LIMIT, 0x03FF);
         vmx_write(VMCS_GUEST_RIP, 0x8000);
         vmx_write(VMCS_GUEST_RSP, 0x7C00);
@@ -168,22 +140,27 @@ static void vmcs_write_guest_state(struct VmxCapabilities *caps)
         /* 64-bit long mode: share host's identity page tables, vmcall stub at 0x1000.
          * FIXED0 forces PG=1 so we need valid page tables — use the host's. */
         uint64_t cr4 = msr_read(MSR_IA32_VMX_CR4_FIXED0) & msr_read(MSR_IA32_VMX_CR4_FIXED1);
-        cr4 |= CR4_PAE;   /* PAE required for long mode */
+        cr4 |= CR4_PAE; /* PAE required for long mode */
         vmx_write(VMCS_GUEST_CR4, cr4);
-        vmx_write(VMCS_GUEST_CR3, cr3_read64());  /* host's identity page tables */
+        vmx_write(VMCS_GUEST_CR3, cr3_read64()); /* host's identity page tables */
         vmx_write(VMCS_GUEST_IA32_EFER, EFER_LME | EFER_LMA | EFER_SCE);
         /* 64-bit code segment */
-        vmx_write(VMCS_GUEST_CS_AR,   VMCS_AR_S_BIT | VMCS_AR_PRESENT |
-                                      VMCS_AR_L_BIT | 0xB); /* L=1 for 64-bit */
-        vmx_write(VMCS_GUEST_CS_LIMIT,  0xFFFF);
+        vmx_write(VMCS_GUEST_CS_AR, VMCS_AR_S_BIT | VMCS_AR_PRESENT |
+                                        VMCS_AR_L_BIT | 0xB); /* L=1 for 64-bit */
+        vmx_write(VMCS_GUEST_CS_LIMIT, 0xFFFF);
         /* 64-bit data segments (same as 32-bit for data) */
         uint32_t d64ar = VMCS_AR_S_BIT | VMCS_AR_PRESENT | 0x3;
-        vmx_write(VMCS_GUEST_DS_AR,   d64ar); vmx_write(VMCS_GUEST_DS_LIMIT, 0xFFFF);
-        vmx_write(VMCS_GUEST_SS_AR,   d64ar); vmx_write(VMCS_GUEST_SS_LIMIT, 0xFFFF);
-        vmx_write(VMCS_GUEST_ES_AR,   d64ar); vmx_write(VMCS_GUEST_ES_LIMIT, 0xFFFF);
-        vmx_write(VMCS_GUEST_FS_AR,   d64ar); vmx_write(VMCS_GUEST_FS_LIMIT, 0xFFFF);
-        vmx_write(VMCS_GUEST_GS_AR,   d64ar); vmx_write(VMCS_GUEST_GS_LIMIT, 0xFFFF);
-        vmx_write(VMCS_GUEST_TR_AR,   VMCS_AR_PRESENT | 0xB); /* 64-bit TSS busy */
+        vmx_write(VMCS_GUEST_DS_AR, d64ar);
+        vmx_write(VMCS_GUEST_DS_LIMIT, 0xFFFF);
+        vmx_write(VMCS_GUEST_SS_AR, d64ar);
+        vmx_write(VMCS_GUEST_SS_LIMIT, 0xFFFF);
+        vmx_write(VMCS_GUEST_ES_AR, d64ar);
+        vmx_write(VMCS_GUEST_ES_LIMIT, 0xFFFF);
+        vmx_write(VMCS_GUEST_FS_AR, d64ar);
+        vmx_write(VMCS_GUEST_FS_LIMIT, 0xFFFF);
+        vmx_write(VMCS_GUEST_GS_AR, d64ar);
+        vmx_write(VMCS_GUEST_GS_LIMIT, 0xFFFF);
+        vmx_write(VMCS_GUEST_TR_AR, VMCS_AR_PRESENT | 0xB); /* 64-bit TSS busy */
         vmx_write(VMCS_GUEST_TR_LIMIT, 0x67);
         vmx_write(VMCS_GUEST_IDTR_LIMIT, 0xFFFF);
         vmx_write(VMCS_GUEST_RIP, 0x1000); /* vmcall proof stub */
@@ -215,15 +192,16 @@ static void vmcs_write_controls(struct VmxCapabilities *caps)
 {
     vmx_write(VMCS_PIN_BASED_CTLS, caps->vc_pin_ctls);
     vmx_write(VMCS_CPU_BASED_CTLS, caps->vc_proc_ctls);
-    if (caps->vc_proc_ctls & PROC_ACTIVATE_SECONDARY)
+    if (caps->vc_proc_ctls & PROC_ACTIVATE_SECONDARY) {
         vmx_write(VMCS_CPU_BASED_CTLS2, caps->vc_proc_ctls2);
+    }
     vmx_write(VMCS_VM_EXIT_CTLS, caps->vc_exit_ctls);
     vmx_write(VMCS_VM_ENTRY_CTLS, caps->vc_entry_ctls);
 
     /* IA-32e guest mode: set for 64-bit proof stub, clear for real mode boot */
     uint32_t entry_ctls = caps->vc_unrestricted_guest
-        ? (caps->vc_entry_ctls & ~ENTRY_IA32E_GUEST)
-        : (caps->vc_entry_ctls |  ENTRY_IA32E_GUEST);
+                              ? (caps->vc_entry_ctls & ~ENTRY_IA32E_GUEST)
+                              : (caps->vc_entry_ctls | ENTRY_IA32E_GUEST);
     vmx_write(VMCS_VM_ENTRY_CTLS, entry_ctls);
 
     /* Exception bitmap: 0 — let all exceptions pass through to guest */
@@ -271,15 +249,13 @@ int vmcs_init(struct VmxState *state)
     uint64_t vmcs_pa = (uint64_t)state->vs_vmcs; /* VA == PA, identity mapped */
 
     /* VMCLEAR initializes the VMCS and sets it as not-current */
-    if (vmx_clear(&vmcs_pa) != 0)
-    {
+    if (vmx_clear(&vmcs_pa) != 0) {
         hv_printf(&debug_serial, "VMCS: VMCLEAR failed\n");
         return -1;
     }
 
     /* VMPTRLD makes this VMCS current */
-    if (vmx_ptr_load(&vmcs_pa) != 0)
-    {
+    if (vmx_ptr_load(&vmcs_pa) != 0) {
         hv_printf(&debug_serial, "VMCS: VMPTRLD failed\n");
         return -1;
     }

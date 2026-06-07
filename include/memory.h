@@ -16,6 +16,7 @@
 #define PAGE_SHIFT_4K      12
 #define PAGE_SIZE_2M       0x00200000 // 1 << 21
 #define PAGE_SHIFT_2M      21
+#define PAGE_SHIFT_1G      30
 #define PAGE_ALIGN_MASK_4K 0xfffff000
 #define PAGE_ALIGN_MASK_2M 0xfff00000
 #define PAGE_SIZE          PAGE_SIZE_2M
@@ -79,6 +80,24 @@ struct PhysicalMMapping {
     struct MemoryMap  sm_maps[];
 };
 
+#define HV_HANDOFF_MAX_RESERVED 32
+
+/*
+ * Plain-old-data handoff from the 32bit loader to the 64bit hvcore payload.
+ * struct SystemInfo can't be shared across that boundary as-is (its pointer
+ * members are 4 bytes wide in the loader and 8 in hvcore), so this carries
+ * only fixed-width integers — giving it an identical layout under both ABIs.
+ * It lets hvcore build an NPT that actually hides the loader's own memory
+ * (image, heap, host page tables) and the BIOS/firmware-reserved regions
+ * GRUB reported, instead of presenting them to the guest as free RAM.
+ */
+struct HvBootHandoff {
+    uint64_t low_mem_end;       /* end of the loader's own footprint (image+heap+page tables) */
+    uint64_t nr_reserved;       /* number of valid entries below                              */
+    uint64_t reserved_start[HV_HANDOFF_MAX_RESERVED];
+    uint64_t reserved_end[HV_HANDOFF_MAX_RESERVED];
+};
+
 struct SystemInfo;
 
 uint8_t                 *mm_get_heap_end(void);
@@ -88,6 +107,13 @@ void                    *mm_expand_heap_4k(size_t sz); // 4K aligned
 struct PhysicalMMapping *mm_init_mapping(struct MultiBootInfo *mbi);
 int                      mm_init_paging(struct SystemInfo *info);
 pml4_t                  *mm_init_page_tables(void);
+
+/* Snapshot the loader's own memory footprint and the firmware-reserved
+ * regions from `info` into the ABI-safe `out`, ready to be handed over
+ * to hvcore (see struct HvBootHandoff). Call only once mm_init_paging()
+ * has finished — its page tables are the last thing the loader allocates,
+ * so mm_get_heap_end() only reflects everything we own at that point. */
+void mm_build_boot_handoff(struct SystemInfo *info, struct HvBootHandoff *out);
 
 struct MemoryMap *mm_alloc_phymap(struct PhysicalMMapping *maps, unsigned int nr_pages, int *error);
 

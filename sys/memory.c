@@ -12,6 +12,7 @@
 #include <hypervisor.h>
 #include <cpu.h>
 #include <system.h>
+#include <string.h>
 
 /* Additional mapping capacity */
 #define MMAP_ADDITIONAL 2
@@ -135,7 +136,27 @@ struct PhysicalMMapping *mm_init_mapping(struct MultiBootInfo *mbi)
     return phy_map;
 }
 
-/* 
+void mm_build_boot_handoff(struct SystemInfo *info, struct HvBootHandoff *out)
+{
+    bzero(out, sizeof(*out));
+    out->low_mem_end = (uint64_t)(unsigned long)mm_get_heap_end();
+
+    if (info == NULL || info->s_phy_maps == NULL) {
+        return;
+    }
+
+    struct PhysicalMMapping *maps = info->s_phy_maps;
+    for (int i = 0; i < maps->sm_nr_maps && out->nr_reserved < HV_HANDOFF_MAX_RESERVED; i++) {
+        struct MemoryMap *m = &maps->sm_maps[i];
+        if (m->mm_flags & MM_RESERVED) {
+            out->reserved_start[out->nr_reserved] = m->mm_start;
+            out->reserved_end[out->nr_reserved]   = m->mm_end;
+            out->nr_reserved++;
+        }
+    }
+}
+
+/*
  * Allocate physical memory map for a given number of 2MB pages
  * If found the full physical mapping will be modified to accomodate
  * the newly allocated region. Only avaliable maps are considered.

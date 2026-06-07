@@ -18,6 +18,17 @@ enum CPUID_REGISTERS {
     CPUID_REG_EDX
 };
 
+/* Legacy PC I/O ports shared by the keyboard driver and the SVM/VMX core
+ * (e.g. for IRQ masking and for intercepting guest-triggered host resets) */
+#define PIC0_CMD_PORT  0x20  /* master 8259 PIC: command/status */
+#define PIC0_DATA_PORT 0x21  /* master 8259 PIC: data/IMR */
+#define PIC1_CMD_PORT  0xA0  /* slave 8259 PIC: command/status */
+#define PIC1_DATA_PORT 0xA1  /* slave 8259 PIC: data/IMR */
+#define KBC_DATA_PORT  0x60  /* keyboard controller: data (write-output-port reset) */
+#define KBC_CMD_PORT   0x64  /* keyboard controller: command/status (reset pulse) */
+#define FAST_A20_PORT  0x92  /* system control port A: fast A20 gate / reset */
+#define PCI_RESET_PORT 0xCF9 /* PCI/ACPI reset control register */
+
 /*
  * Implemented by the keyboard driver, because on PCs the keyboard
  * controller is routed to the reset line
@@ -174,6 +185,39 @@ void cr4_write(uint32_t value)
 {
     __asm__ __volatile__("movl %0, %%cr4" : /* No output */
                                         : "r"(value));
+}
+
+/* Segment register / task register accessors */
+static inline
+uint16_t read_cs(void)
+{
+    uint16_t v;
+    __asm__ __volatile__("movw %%cs, %0" : "=r"(v));
+    return v;
+}
+
+static inline
+uint16_t read_ss(void)
+{
+    uint16_t v;
+    __asm__ __volatile__("movw %%ss, %0" : "=r"(v));
+    return v;
+}
+
+static inline
+uint16_t read_ds(void)
+{
+    uint16_t v;
+    __asm__ __volatile__("movw %%ds, %0" : "=r"(v));
+    return v;
+}
+
+static inline
+uint16_t read_tr(void)
+{
+    uint16_t v;
+    __asm__ __volatile__("str %0" : "=r"(v));
+    return v;
 }
 
 /* Instructions for Machine Specific Registers */

@@ -53,12 +53,23 @@ void __noreturn hv_entry(struct MultiBootInfo *mbi)
 #ifdef CONFIG_AUTOBOOT
     /* Headless mode: skip interactive console, load and launch immediately */
     {
+        static struct HvBootHandoff handoff;
         int sz_image = 0;
         void *elf_start = NULL;
         sz_image = ld_deflate_hvcore(system_info.s_core_map, &error, &elf_start);
         system_info.s_core_image = ld_load_hvcore(system_info.s_core_map, &error, elf_start, sz_image);
         cpu_init_long_mode(&system_info);
-        ld_call_hvcore(&system_info);
+
+        /* Tell hvcore which physical memory belongs to us (the loader's own
+         * image, heap and the host page tables mm_init_paging just built —
+         * all below the hvcore image at __hvcore_start) and which ranges
+         * the BIOS/GRUB reported as reserved, so its NPT can hide them from
+         * the guest instead of handing them out as ordinary RAM. Without
+         * this, an L2 guest that probes/clears "free" memory during boot
+         * silently corrupts the host's active page tables. */
+        mm_build_boot_handoff(&system_info, &handoff);
+
+        ld_call_hvcore(&system_info, &handoff);
     }
 #else
     dc_start(&system_info);
