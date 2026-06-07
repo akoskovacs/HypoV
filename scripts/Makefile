@@ -33,4 +33,4 @@
 
 # Let clean descend into subdirs
 #subdir-	+= basic kconfig package selinux
-subdir-y	+= basic kconfig install_stage0 fat32_read
+subdir-y	+= basic kconfig

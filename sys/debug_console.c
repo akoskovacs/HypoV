@@ -8,6 +8,7 @@
 
 #include <hypervisor.h>
 #include <cpu.h>
+#include <string.h>
 #include <types.h>
 #include <drivers/input/pc_keyboard.h>
 #include <debug_console.h>
@@ -455,18 +456,128 @@ static int dc_mem_handle_key(struct DebugScreen *scr, char key)
 
 static int dc_disk_info_show(struct DebugScreen *scr)
 {
-    struct ConsoleDisplay *current_display = (struct ConsoleDisplay *)sys_info->s_display;
+    struct MultiBootInfo *boot_info = sys_info->s_boot_info;
+    struct CharacterDisplay *cdisp  = sys_info->s_display;
+    struct ConsoleDisplay *current_display = (struct ConsoleDisplay *)cdisp;
+    int row = 5;
+    uint32_t i, shown, drive, part;
+    struct MultiBootModule *mod;
+    const char *mod_name;
 
-    hv_console_set_xy(current_display, 26, 11);
-    hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED | LIGHT);
-    hv_disp_puts((struct CharacterDisplay *)current_display, "< Implementation required >");
-    return -HV_ENOIMPL;
+    hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
+
+    if (!boot_info) {
+        hv_console_set_xy(current_display, 10, row);
+        hv_disp_puts(cdisp, "Multiboot info is not available.");
+        return -HV_ENOIMPL;
+    }
+
+    if (boot_info->flags & MB_INFO_BOOTDEV) {
+        drive = boot_info->boot_device >> 24;
+        part  = (boot_info->boot_device >> 16) & 0xFF;
+
+        hv_console_set_xy(current_display, 10, row);
+        hv_disp_puts(cdisp, "Boot drive:");
+        hv_console_set_xy(current_display, 30, row++);
+        hv_printf(cdisp, "%x (%s)", drive,
+                  drive < 0x80 ? "Floppy disk" :
+                  drive < 0xE0 ? "Hard disk" : "CD-ROM/other");
+
+        hv_console_set_xy(current_display, 10, row);
+        hv_disp_puts(cdisp, "Boot partition:");
+        hv_console_set_xy(current_display, 30, row++);
+        if (part == 0xFF) {
+            hv_disp_puts(cdisp, "None (whole disk)");
+        } else {
+            hv_printf(cdisp, "%d", part);
+        }
+    } else {
+        hv_console_set_xy(current_display, 10, row);
+        hv_disp_puts(cdisp, "Boot drive:");
+        hv_console_set_xy(current_display, 30, row++);
+        hv_disp_puts(cdisp, "Unknown");
+    }
+
+    row++;
+    hv_console_set_xy(current_display, 10, row++);
+    hv_disp_puts(cdisp, "Boot modules loaded by GRUB:");
+
+    if ((boot_info->flags & MB_INFO_MODS) && boot_info->mods_count > 0) {
+        mod   = (struct MultiBootModule *)boot_info->mods_addr;
+        shown = boot_info->mods_count > 5 ? 5 : boot_info->mods_count;
+
+        for (i = 0; i < shown; i++) {
+            mod_name = (const char *)mod[i].cmdline;
+            hv_console_set_xy(current_display, 12, row);
+            hv_printf(cdisp, "%s", (mod_name && mod_name[0]) ? mod_name : "<unnamed>");
+            hv_console_set_xy(current_display, 45, row++);
+            hv_printf(cdisp, "%d KB", (mod[i].mod_end - mod[i].mod_start) / 1024);
+        }
+
+        if (boot_info->mods_count > shown) {
+            hv_console_set_xy(current_display, 12, row++);
+            hv_printf(cdisp, "+ %d more", boot_info->mods_count - shown);
+        }
+    } else {
+        hv_console_set_xy(current_display, 12, row++);
+        hv_disp_puts(cdisp, "<none>");
+    }
+
+    return 0;
 }
 static int dc_disk_handle_key(struct DebugScreen *scr, char key) { return -HV_ENOIMPL; }
 
 static int dc_guest_info_show(struct DebugScreen *scr)
 {
-    return dc_disk_info_show(scr);
+    struct CpuInfo *cpu_info       = sys_info->s_cpu_info;
+    struct CharacterDisplay *cdisp = sys_info->s_display;
+    struct ConsoleDisplay *current_display = (struct ConsoleDisplay *)cdisp;
+    int32_t regs[4];
+    int row = 5;
+    const char *vt_name  = "None detected";
+    bool        vt_found = false;
+
+    hv_console_set_attribute(current_display, FG_COLOR_WHITE | BG_COLOR_RED);
+
+    if (strcmp(cpu_info->ci_vendor, "GenuineIntel") == 0) {
+        if (cpu_info->ci_features & CPU_FEATURE_VMX) {
+            vt_name  = "Intel VT-x (VMX)";
+            vt_found = true;
+        }
+    } else if (strcmp(cpu_info->ci_vendor, "AuthenticAMD") == 0) {
+        cpuid(0x80000001, regs);
+        if (regs[CPUID_REG_ECX] & CPUID_EXT_FEATURE_SVM) {
+            vt_name  = "AMD-V (SVM)";
+            vt_found = true;
+        }
+    }
+
+    hv_console_set_xy(current_display, 10, row);
+    hv_disp_puts(cdisp, "Virtualization extension:");
+    hv_console_set_xy(current_display, 40, row++);
+    hv_disp_puts(cdisp, vt_name);
+
+    hv_console_set_xy(current_display, 10, row);
+    hv_disp_puts(cdisp, "Guest support:");
+    hv_console_set_xy(current_display, 40, row++);
+    hv_disp_puts(cdisp, vt_found ? "Available" : "Unavailable");
+
+    hv_console_set_xy(current_display, 10, row);
+    hv_disp_puts(cdisp, "Nested virtualization:");
+    hv_console_set_xy(current_display, 40, row++);
+    if (cpu_info->ci_features & CPU_FEATURE_HVISOR) {
+        hv_disp_puts(cdisp, vt_found ? "Yes (exposed by host)" : "No (hidden by host)");
+    } else {
+        hv_disp_puts(cdisp, "N/A (running on bare metal)");
+    }
+
+    hv_console_set_xy(current_display, 10, ++row);
+    hv_disp_puts(cdisp, "The guest OS is started and managed by the");
+    hv_console_set_xy(current_display, 10, ++row);
+    hv_disp_puts(cdisp, "hypervisor core (hvcore) once it has been loaded.");
+    hv_console_set_xy(current_display, 10, ++row);
+    hv_disp_puts(cdisp, "Press [F1] and then [L] to load and start it.");
+    return 0;
 }
 
 static int dc_guest_handle_key(struct DebugScreen *scr, char key) { return -HV_ENOIMPL; }

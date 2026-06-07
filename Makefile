@@ -91,7 +91,7 @@ ifeq ($(skip-makefile),)
 # If building an external module we do not care about the all: rule
 # but instead _all depend on modules
 PHONY += all
-_all: all
+_all: help
 
 srctree		:= $(if $(KBUILD_SRC),$(KBUILD_SRC),$(CURDIR))
 objtree		:= $(CURDIR)
@@ -238,20 +238,12 @@ RCS_FIND_IGNORE := \( -name SCCS -o -name BitKeeper -o -name .svn -o -name CVS -
 # Rules shared between *config targets and build targets
 
 # Basic helpers built in scripts/
-PHONY += scripts_basic install_stage0 fat32_read
+PHONY += scripts_basic
 scripts_basic:
 	$(Q)$(MAKE) $(build)=scripts/basic
 
 # To avoid any implicit rule to kick in, define an empty command.
 scripts/basic/%: scripts_basic ;
-
-install_stage0:
-	$(Q)$(MAKE) $(build)=scripts/install_stage0
-
-fat32_read:
-	$(Q)$(MAKE) $(build)=scripts/fat32_read
-
-scripts/install_stage0/%: scripts_basic ;
 
 PHONY += outputmakefile
 # outputmakefile generates a Makefile in the output directory, if using a
@@ -349,15 +341,10 @@ else
 include/config/auto.conf: ;
 endif # $(dot-config)
 
-stage0/stage0: stage0/stage0.asm
-	$(Q)$(MAKE) -C stage0
-
-loader: stage0/stage0
-
 # The all: target is the default when no target is given on the
 # command line.
 
-all: sys/core/boot_stub.h hypov loader
+all: sys/core/boot_stub.h hypov
 
 sys/core/boot_stub.h: sys/core/boot_stub.asm
 	$(Q)$(YASM) -f bin -o sys/core/boot_stub.bin $<
@@ -454,7 +441,9 @@ qemusvmdbg: hypov.iso
 # GRUB shows a 3s menu — host auto-boots HypoV; in the guest, press 1.
 # Works with: make qemuproof (QEMU/SVM) or make bochsproof (Bochs/VMX)
 #
-PROOF_KERNEL_URL := http://tinycorelinux.net/15.x/x86_64/release/distribution_files/vmlinuz64
+# Requires vmlinuz64 (a Linux kernel image, e.g. from
+# http://tinycorelinux.net/15.x/x86_64/release/distribution_files/vmlinuz64)
+# to be present in the working directory.
 
 tools/guest/hyp_check: tools/guest/hyp_check.c
 	$(Q)gcc -static -o $@ $< 2>/dev/null && echo "  CC (native)  $@" || \
@@ -470,9 +459,6 @@ proof-initrd.img: tools/guest/hyp_check
 	$(Q)chmod +x /tmp/hypv_root/init
 	$(Q)cd /tmp/hypv_root && find . | cpio -o -H newc 2>/dev/null | gzip > $(CURDIR)/$@
 	@echo "  INITRD  $@"
-
-vmlinuz64:
-	wget -O $@ $(PROOF_KERNEL_URL)
 
 hypov-proof.iso: hypov proof-initrd.img vmlinuz64
 	$(Q)mkdir -p /tmp/hproof/boot/grub
@@ -492,20 +478,6 @@ qemuproof: hypov hypov-proof.iso
 	$(Q)$(QEMU64) -cpu EPYC -m 512 \
 	    -cdrom hypov-proof.iso \
 	    -serial stdio -monitor none
-
-# CirrOS: tiny cloud-testing image with known default credentials.
-# Login: cirros / gocubsgo  (no setup, no cloud-init, works immediately)
-CIRROS_IMG ?= cirros.img
-CIRROS_URL := https://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-disk.img
-
-download-cirros:
-	wget -O $(CIRROS_IMG) $(CIRROS_URL)
-
-qemucirros: hypov $(CIRROS_IMG)
-	$(Q)$(QEMU64) -cpu EPYC -m 512 \
-	    -drive file=$(CIRROS_IMG),if=ide,index=0 \
-	    -drive file=hypov.iso,media=cdrom,if=ide,index=1 \
-	    -serial stdio
 
 # Alpine 3.19 guest (~100MB) — login: vagrant / vagrant
 # Run 'make setup-guest' once to install gcc (persisted to disk).
@@ -529,9 +501,6 @@ setup-guest:
 	    -o /tmp/vagrant_key && chmod 600 /tmp/vagrant_key
 	@echo "Waiting for SSH..."
 	@until ssh $(SSH_OPTS) -i /tmp/vagrant_key vagrant@localhost true 2>/dev/null; do sleep 2; done
-	@echo "Fixing DNS (QEMU internal DNS unreachable through HypoV; using 8.8.8.8)..."
-	ssh $(SSH_OPTS) -i /tmp/vagrant_key vagrant@localhost \
-	    "echo 'nameserver 8.8.8.8' | sudo tee /etc/resolv.conf > /dev/null"
 	@echo "Installing gcc (one-time, persisted to disk)..."
 	ssh $(SSH_OPTS) -i /tmp/vagrant_key vagrant@localhost "sudo apk add gcc musl-dev"
 	scp $(SSH_OPTS) -i /tmp/vagrant_key tools/guest/hyp_check.c vagrant@localhost:~
@@ -549,7 +518,7 @@ qemuguest: hypov.iso $(GUEST_IMG)
 	    -boot order=dc \
 	    -drive file=$(GUEST_IMG),if=ide,index=0 \
 	    -drive file=hypov.iso,media=cdrom,if=ide,index=1 \
-	    -nic user,model=e1000,hostfwd=tcp::2222-:22 \
+	    -nic user,model=e1000,hostfwd=tcp::2222-:22,dns=1.1.1.1 \
 	    -serial stdio -monitor none
 
 qemudbg: hypov.iso
@@ -583,15 +552,7 @@ upfs:
 # make sure no implicit rule kicks in
 $(sort $(hypov-all)): $(hypov-dirs) ;
 
-# Handle descending into subdirectories listed in $(vmlinux-dirs)
-# Preset locale variables to speed up the build process. Limit locale
-# tweaks to this spot to avoid wrong language settings when running
-# make menuconfig etc.
-# Error messages still appears in the original language
-
-#PHONY += $(vmlinux-dirs)
-#$(vmlinux-dirs): prepare scripts
-PHONY += $(hypov-dirs) iso bochs bochsproof qemu qemufs qemutcg qemutcgdbg qemusvm qemusvmdbg qemuproof qemucirros download-cirros qemuguest setup-guest mkfs upfs
+PHONY += $(hypov-dirs) iso bochs bochsproof qemu qemufs qemutcg qemutcgdbg qemusvm qemusvmdbg qemuproof qemuguest setup-guest mkfs upfs
 $(hypov-dirs): scripts_basic
 	$(Q)$(MAKE) $(build)=$@
 
@@ -683,42 +644,16 @@ help:
 	@echo  '  all		  - Build all targets marked with [*]'
 	@echo  '* hypov	  	  - Build the hypervisor'
 	@echo  '  iso  	  	  - Create a bootable ISO image for CDs and pendrives'
+	@echo  '  qemuiso  	  - Build the ISO and boot it in QEMU'
+	@echo  '  qemuguest	  - Boot HypoV in QEMU together with an Alpine Linux guest'
+	@echo  '  qemuproof	  - Boot HypoV in QEMU and run the hypercall round-trip proof'
 	@echo  '  mkfs 	  	  - Create a FAT32 test filesystem to use with SYSLINUX'
 	@echo  '  upfs 	  	  - Update the FAT32 test filesystem if something is changed'
 	@echo  '  dir/            - Build all files in dir and below'
 	@echo  '  dir/file.[oisS] - Build specified target only'
-	@echo  '  dir/file.lst    - Build specified mixed source/assembly target only'
-	@echo  '                    (requires a recent binutils and recent build (System.map))'
-	@echo  '  tags/TAGS	  - Generate tags file for editors'
-	@echo  '  cscope	  - Generate cscope index'
-	@echo  '  gtags           - Generate GNU GLOBAL index'
-	@echo  '  kernelrelease	  - Output the release version string'
-	@echo  '  kernelversion	  - Output the version stored in Makefile'
-	 echo  ''
-	@echo  'Static analysers'
-	@echo  '  checkstack      - Generate a list of stack hogs'
-	@echo  '  namespacecheck  - Name space analysis on compiled kernel'
-	@echo  '  versioncheck    - Sanity check on version.h usage'
-	@echo  '  includecheck    - Check for duplicate included header files'
-	@echo  '  export_report   - List the usages of all exported symbols'
-	@echo  '  headers_check   - Sanity check on exported headers'
-#	@$(MAKE) -f $(srctree)/scripts/Makefile.help checker-help
-	@echo  ''
-#	@echo  'Kernel packaging:'
-#	@$(MAKE) $(build)=$(package-dir) help
-	@echo  ''
-#	@echo  'Documentation targets:'
-#	@$(MAKE) -f $(srctree)/Documentation/DocBook/Makefile dochelp
 	@echo  ''
 	@echo  '  make V=0|1 [targets] 0 => quiet build (default), 1 => verbose build'
-	@echo  '  make V=2   [targets] 2 => give reason for rebuild of target'
 	@echo  '  make O=dir [targets] Locate all output files in "dir", including .config'
-	@echo  '  make W=n   [targets] Enable extra gcc checks, n=1,2,3 where'
-	@echo  '		1: warnings which may be relevant and do not occur too often'
-	@echo  '		2: warnings which occur quite often but may still be relevant'
-	@echo  '		3: more obscure warnings, can most likely be ignored'
-	@echo  '		Multiple levels can be combined with W=12 or W=123'
-	@echo  '  make RECORDMCOUNT_WARN=1 [targets] Warn about ignored mcount sections'
 	@echo  ''
 	@echo  'Execute "make" or "make all" to build all targets marked with [*] '
 	@echo  'For further info see the ./README file'
