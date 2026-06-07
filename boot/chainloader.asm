@@ -15,15 +15,6 @@ section .chainloader.text
 align 4
 
 bits 32
-prot_disable:
-    mov eax, cr0
-    xor eax, 0x1 
-    mov cr0, eax
-    nop
-    nop
-    nop
-    nop
-ret
 
 resetpic:                                  ; reset 8259 master and slave pic vectors
     push ax                                ; expects bh = master vector, bl = slave vector
@@ -72,7 +63,7 @@ bits 16
     nop
     nop
     nop
-;    call prot_disable
+    xchg bx, bx ; Bochs breakpoint
     mov sp, 0x8000
     ; The GDT segment selectors are not valid anymore
 #if 1
