@@ -4,6 +4,8 @@
 
 The project boots via GRUB multiboot into a 32-bit stub that sets up paging and long mode, then decompresses and loads a self-contained 64-bit hypervisor core (`hvcore.elf64`) at a fixed physical address. The 64-bit core has its own GDT, IDT, and interrupt handling.
 
+Once running, the core detects the available virtualization extensions — Intel VT-x (VMX) or AMD-V (SVM) — and can launch and run a real guest operating system (e.g. Alpine Linux, CirrOS, TinyCore) inside a virtual machine, with nested page tables, intercepted I/O, and emulated legacy peripherals (PIC, PS/2 keyboard).
+
 ## Dependencies
 
 ### Linux (Debian/Ubuntu)
@@ -73,6 +75,17 @@ After boot, press **F1** then **L** to load and execute the 64-bit hypervisor co
 ```sh
 make qemuiso
 ```
+
+### Running a guest OS
+
+These targets boot HypoV and a guest disk image together, then load the hypervisor (press **F1**, **L**) so the guest starts running inside the VM:
+
+| Target | Guest | Notes |
+|---|---|---|
+| `make qemuguest` | Alpine Linux | Login `vagrant` / `vagrant`; SSH on `localhost:2222` |
+| `make qemuproof` | TinyCore (`hyp_check`) | Runs a hypercall round-trip proof inside the guest |
+
+Run `make qemusvm` to boot HypoV with TCG-emulated AMD-V (works without KVM, e.g. on macOS), or `make qemutcg` for TCG-emulated Intel VT-x. The `*dbg` variants (`make qemudbg`, `make qemusvmdbg`, `make qemutcgdbg`) additionally start a GDB stub (`-S -s`) for remote debugging.
 
 ## Project structure
 

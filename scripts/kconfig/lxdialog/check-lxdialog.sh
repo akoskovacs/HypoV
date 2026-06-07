@@ -13,6 +13,18 @@ ldflags()
 			fi
 		done
 	done
+	# Fall back to an actual link test: on macOS, system libraries resolvable
+	# through the linker's default search paths are echoed back verbatim by
+	# '-print-file-name' (no '/'), even though '-lncurses' links just fine.
+	ltmp=.lxdialog.ltmp
+	trap "rm -f $ltmp" 0 1 2 3 15
+	for lib in ncursesw ncurses curses ; do
+		echo 'int main(void) { return 0; }' | $cc -xc - -o $ltmp -l${lib} 2>/dev/null
+		if [ $? -eq 0 ]; then
+			echo "-l${lib}"
+			exit
+		fi
+	done
 	exit 1
 }
 
@@ -40,7 +52,7 @@ trap "rm -f $tmp" 0 1 2 3 15
 check() {
         $cc -xc - -o $tmp 2>/dev/null <<'EOF'
 #include CURSES_LOC
-main() {}
+int main(void) { return 0; }
 EOF
 	if [ $? != 0 ]; then
 	    echo " *** Unable to find the ncurses libraries or the"       1>&2
