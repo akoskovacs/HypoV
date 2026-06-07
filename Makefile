@@ -466,9 +466,8 @@ tools/guest/hyp_check: tools/guest/hyp_check.c
 
 proof-initrd.img: tools/guest/hyp_check
 	$(Q)rm -rf /tmp/hypv_root && mkdir -p /tmp/hypv_root/dev /tmp/hypv_root/proc /tmp/hypv_root/sys
-	$(Q)cp tools/guest/hyp_check /tmp/hypv_root/hyp_check
-	$(Q)printf '#!/bin/sh\nmount -t devtmpfs devtmpfs /dev 2>/dev/null || true\n/hyp_check\nwhile true; do sleep 60; done\n' \
-	    > /tmp/hypv_root/init && chmod +x /tmp/hypv_root/init
+	$(Q)cp tools/guest/hyp_check /tmp/hypv_root/init
+	$(Q)chmod +x /tmp/hypv_root/init
 	$(Q)cd /tmp/hypv_root && find . | cpio -o -H newc 2>/dev/null | gzip > $(CURDIR)/$@
 	@echo "  INITRD  $@"
 
