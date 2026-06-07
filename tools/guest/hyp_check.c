@@ -5,14 +5,14 @@
  * Detects Intel vs AMD and uses vmcall/vmmcall accordingly.
  * If running under HypoV the hypervisor responds with a magic value.
  */
-#include <stdio.h>
-#include <stdint.h>
 #include <fcntl.h>
-#include <unistd.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <sys/mount.h>
+#include <unistd.h>
 
-#define HV_SIGNATURE  0x48594F56UL  /* "HYOV" */
-#define HV_MAGIC      0xDEADBEEFUL
+#define HV_SIGNATURE 0x48594F56UL /* "HYOV" */
+#define HV_MAGIC     0xDEADBEEFUL
 
 /* When running as PID 1 (Linux /init), the kernel can't open /dev/console
  * until devtmpfs is mounted.  Mount it ourselves so printf reaches ttyS0. */
@@ -38,24 +38,25 @@ static int is_intel(void)
 
 int main(void)
 {
-    setup_console();
+    pid_t pid = getpid();
+    if (pid == 1) {
+        setup_console();
+    }
 
     uint64_t rbx = 0, rcx = 0;
 
     if (is_intel()) {
         __asm__ __volatile__(
-            "vmcall"          /* Intel VT-x */
+            "vmcall" /* Intel VT-x */
             : "=b"(rbx), "=c"(rcx)
             : "a"((uint64_t)HV_SIGNATURE)
-            : "memory"
-        );
+            : "memory");
     } else {
         __asm__ __volatile__(
-            "vmmcall"         /* AMD SVM */
+            "vmmcall" /* AMD SVM */
             : "=b"(rbx), "=c"(rcx)
             : "a"((uint64_t)HV_SIGNATURE)
-            : "memory"
-        );
+            : "memory");
     }
 
     if (rbx == HV_MAGIC) {
