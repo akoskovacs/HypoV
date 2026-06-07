@@ -23,3 +23,16 @@ config SZ_HV_STACK
     ---help---
         Size of the fixed stack used by the hypervisor after the memory load.
         Must be a multiple of 4096.
+
+menu "Logging"
+    config HV_PHASE_LOG
+        default n
+        bool "Log SVM exit-code phase transitions"
+        ---help---
+            Print a one-line trace ("PHASE <from>-><to> cr0=... efer=...
+            rip=...") to the debug serial console whenever the guest's SVM
+            exit code changes, showing its boot-phase progression.
+
+            Useful when debugging guest boot issues, but adds noise to the
+            serial log during normal runs, so it is disabled by default.
+endmenu

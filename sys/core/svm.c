@@ -302,10 +302,10 @@ static void handle_svm_io(struct Vmcb *v, struct GuestRegisters *regs)
          * within the existing eax, while a 32-bit read zero-extends to rax. */
         if (info & SVM_IOIO_SZ8) {
             uint8_t val = inb(port);
-            regs->rax = (regs->rax & ~(uint64_t)0xFF) | val;
+            regs->rax   = (regs->rax & ~(uint64_t)0xFF) | val;
         } else if (info & SVM_IOIO_SZ16) {
             uint16_t val = inw(port);
-            regs->rax = (regs->rax & ~(uint64_t)0xFFFF) | val;
+            regs->rax    = (regs->rax & ~(uint64_t)0xFFFF) | val;
         } else if (info & SVM_IOIO_SZ32) {
             regs->rax = inl(port);
         }
@@ -406,6 +406,25 @@ static void handle_svm_intr(struct Vmcb *v)
  * Main exit dispatcher
  * ----------------------------------------------------------------------- */
 
+#ifdef CONFIG_HV_PHASE_LOG
+/* One-line trace on each exit-type transition to show boot phases. */
+static void svm_log_phase(struct Vmcb *v, uint64_t code)
+{
+    static uint64_t prev_code = 0;
+
+    if (code != prev_code) {
+        hv_printf(&debug_serial,
+                  "PHASE %x->%x cr0=%x efer=%x rip=%x\n",
+                  (unsigned)prev_code, (unsigned)code,
+                  (unsigned)v->state.cr0, (unsigned)v->state.efer,
+                  (unsigned)v->state.rip);
+        prev_code = code;
+    }
+}
+#else
+static inline void svm_log_phase(struct Vmcb *v, uint64_t code) {}
+#endif
+
 static void svm_exit_dispatch(struct Vmcb *v, struct GuestRegisters *regs,
                               uint64_t *exit_count)
 {
@@ -415,18 +434,7 @@ static void svm_exit_dispatch(struct Vmcb *v, struct GuestRegisters *regs,
 
     trace_record(code, v->state.rip, v->control.exit_info1, *exit_count);
 
-    /* One-line trace on each exit-type transition to show boot phases. */
-    {
-        static uint64_t prev_code = 0;
-        if (code != prev_code) {
-            hv_printf(&debug_serial,
-                      "PHASE %x->%x cr0=%x efer=%x rip=%x\n",
-                      (unsigned)prev_code, (unsigned)code,
-                      (unsigned)v->state.cr0, (unsigned)v->state.efer,
-                      (unsigned)v->state.rip);
-            prev_code = code;
-        }
-    }
+    svm_log_phase(v, code);
 
     switch (code) {
     case SVM_EXIT_INTR:
