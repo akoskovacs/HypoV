@@ -96,8 +96,6 @@ reset_disk:
     mov ah, 0x00 ; reset function
     mov dl, 0x80 ; 1. hard disk drive
     int 0x13
-    call prot_disable
-    xchg bx, bx
     jc reset_disk
     ; Load the boot sector at 0x0000:0x7c00
     mov bx, 0x0000
@@ -111,7 +109,6 @@ reset_disk:
     mov dh, 0x00 ; head
     mov dl, 0x80 ; drive
     int 0x13
-    call prot_disable
     jc .read_disk
     ; The boot sector might depend on the
     ; correct drive number
