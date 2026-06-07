@@ -501,9 +501,6 @@ setup-guest:
 	    -o /tmp/vagrant_key && chmod 600 /tmp/vagrant_key
 	@echo "Waiting for SSH..."
 	@until ssh $(SSH_OPTS) -i /tmp/vagrant_key vagrant@localhost true 2>/dev/null; do sleep 2; done
-	@echo "Fixing DNS (QEMU internal DNS unreachable through HypoV; using 8.8.8.8)..."
-	ssh $(SSH_OPTS) -i /tmp/vagrant_key vagrant@localhost \
-	    "echo 'nameserver 8.8.8.8' | sudo tee /etc/resolv.conf > /dev/null"
 	@echo "Installing gcc (one-time, persisted to disk)..."
 	ssh $(SSH_OPTS) -i /tmp/vagrant_key vagrant@localhost "sudo apk add gcc musl-dev"
 	scp $(SSH_OPTS) -i /tmp/vagrant_key tools/guest/hyp_check.c vagrant@localhost:~
@@ -521,7 +518,7 @@ qemuguest: hypov.iso $(GUEST_IMG)
 	    -boot order=dc \
 	    -drive file=$(GUEST_IMG),if=ide,index=0 \
 	    -drive file=hypov.iso,media=cdrom,if=ide,index=1 \
-	    -nic user,model=e1000,hostfwd=tcp::2222-:22 \
+	    -nic user,model=e1000,hostfwd=tcp::2222-:22,dns=1.1.1.1 \
 	    -serial stdio -monitor none
 
 qemudbg: hypov.iso

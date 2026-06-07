@@ -1,10 +1,12 @@
 # HypoV [![Build](https://github.com/akoskovacs/HypoV/actions/workflows/build.yml/badge.svg)](https://github.com/akoskovacs/HypoV/actions/workflows/build.yml)
 
-64-bit **hypervisor** for funzies.
+64-bit malicious **hypervisor** for funzies.
+
+![Hypervisor info](docs/images/debug-console-hypervisor.png)
 
 The project boots via GRUB multiboot into a 32-bit stub that sets up paging and long mode, then decompresses and loads a self-contained 64-bit hypervisor core (`hvcore.elf64`) at a fixed physical address. The 64-bit core has its own GDT, IDT, and interrupt handling.
 
-Once running, the core detects the available virtualization extensions — Intel VT-x (VMX) or AMD-V (SVM) — and can launch and run a real guest operating system (e.g. Alpine Linux, CirrOS, TinyCore) inside a virtual machine, with nested page tables, intercepted I/O, and emulated legacy peripherals (PIC, PS/2 keyboard).
+Once running, the core detects the available virtualization extensions — Intel VT-x (VMX) or AMD-V (SVM) — and can launch and run a real guest operating system (Alpine for testing by default) inside a virtual machine, with nested page tables, intercepted I/O, and emulated legacy peripherals (PIC, PS/2 keyboard).
 
 ## Dependencies
 
@@ -69,6 +71,13 @@ qemu-system-x86_64 -boot d -cdrom hypov.iso -m 512 -serial stdio
 ```
 
 After boot, press **F1** then **L** to load and execute the 64-bit hypervisor core.
+
+### Debug console
+
+Before the hypervisor core is loaded, a 32-bit debug console lets you inspect the host (switch screens with **F1**-**F5**):
+
+![CPU info](docs/images/debug-console-cpu.png)
+![Memory map](docs/images/debug-console-memory.png)
 
 ### QEMU (shortcut)
 
