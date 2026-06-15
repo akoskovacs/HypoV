@@ -1,5 +1,5 @@
-CC := x86_64-elf-gcc
-LD := x86_64-elf-ld
+CC := gcc
+LD := ld
 subdir-ccflags-y := -fPIC
 subdir-ccflags-y += -fvisibility=protected
 subdir-ccflags-y += -mno-red-zone

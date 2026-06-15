@@ -164,6 +164,11 @@ enum CR4_FLAGS {
     // Reserved (22..63)
 };
 
+/* Segment base MSRs */
+#define MSR_GS_BASE       0xC0000001
+#define MSR_FS_BASE       0xC0000100
+#define MSR_KERNEL_GS_BASE 0xC0000102
+
 /* Extended Feature Enable Register (MSR), only for Intel now  */
 #define MSR_IA32_EFER 0xC0000080
 

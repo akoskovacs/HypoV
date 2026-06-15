@@ -150,10 +150,10 @@ uint32_t cr1_read(void)
 }
 
 static inline
-uint32_t cr2_read(void)
+uint64_t cr2_read64(void)
 {
-    uint32_t value;
-    __asm__ __volatile__("movl %%cr2, %0" : "=r"(value));
+    uint64_t value;
+    __asm__ __volatile__("mov %%cr2, %0" : "=r"(value));
     return value;
 }
 

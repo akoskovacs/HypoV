@@ -117,7 +117,7 @@ HOSTCXX      = g++
 HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer
 HOSTCXXFLAGS = -O2
 
-GRUB_MKRESCUE = i686-elf-grub-mkrescue
+GRUB_MKRESCUE = grub-mkrescue
 
 # Beautify output
 # ---------------------------------------------------------------------------
@@ -379,9 +379,9 @@ quiet_cmd_hypov = LD      $@
 	  -Wl,-T boot/linker.lds $(SHARED_FLAGS) -Wl,-Map $(MAPFILE) -ggdb
 
 # Link the core ELF64
-CC64 = x86_64-elf-gcc
+CC64 = gcc
 quiet_cmd_hvcore = LD      $@
-      cmd_hvcore = $(CC64) -Wl,-ehv_entry_64 -nostdlib -o $(HVCORE_DIR)/$(HVCORE_TARGET) \
+      cmd_hvcore = $(CC64) -Wl,-ehv_entry_64 -nostdlib -no-pie -o $(HVCORE_DIR)/$(HVCORE_TARGET) \
 	  -Wl,-T $(HVCORE_DIR)/hvcore.lds -Wl,--start-group $(HVCORE_LIB64) $(hvcore-objs) -Wl,--end-group -ggdb
 
 # Compress the target ELF64 with XZ
@@ -415,13 +415,13 @@ hypov: $(hypov-all) $(HVCORE_OBJ)
 	$(Q)$(CHECK_MBOOT) $@.bin && echo "OK" || echo "FAIL"
 
 qemu: hypov
-	$(Q)$(QEMU64) -serial stdio -monitor none -kernel $(BINARY_TARGET)
+	$(Q)$(QEMU64) -accel kvm -cpu host -serial stdio -monitor none -kernel $(BINARY_TARGET)
 
 qemufs: hypov
-	$(Q)$(QEMU64) -serial stdio -monitor none -hda testfs.img
+	$(Q)$(QEMU64) -accel kvm -cpu host -serial stdio -monitor none -hda testfs.img
 
 qemuiso: hypov.iso
-	$(Q)$(QEMU64) -cpu EPYC -m 512 -serial stdio -monitor none -cdrom $^
+	$(Q)$(QEMU64) -accel kvm -cpu host -m 512 -serial stdio -monitor none -cdrom $^
 
 # TCG with Intel VMX emulation
 qemutcg: hypov.iso
@@ -475,7 +475,7 @@ hypov-proof.iso: hypov proof-initrd.img vmlinuz64
 
 qemuproof: hypov hypov-proof.iso
 	@echo "When GRUB appears the SECOND time (inside the guest), press 1."
-	$(Q)$(QEMU64) -cpu EPYC -m 512 \
+	$(Q)$(QEMU64) -accel kvm -cpu host -m 512 \
 	    -cdrom hypov-proof.iso \
 	    -serial stdio -monitor none
 
@@ -508,13 +508,12 @@ setup-guest:
 	ssh $(SSH_OPTS) -i /tmp/vagrant_key vagrant@localhost
 
 qemuguest: hypov.iso $(GUEST_IMG)
-	@pkill -f "$(GUEST_IMG)" 2>/dev/null || true
 	@echo "┌─────────────────────────────────────────┐"
 	@echo "│  HypoV guest: Alpine Linux              │"
 	@echo "│  Login:  vagrant  │  Password: vagrant  │"
 	@echo "│  SSH:    ssh -p 2222 vagrant@localhost  │"
 	@echo "└─────────────────────────────────────────┘"
-	$(Q)$(QEMU64) -cpu EPYC -m 512 \
+	$(Q)$(QEMU64) -accel kvm -cpu host -m 512 \
 	    -boot order=dc \
 	    -drive file=$(GUEST_IMG),if=ide,index=0 \
 	    -drive file=hypov.iso,media=cdrom,if=ide,index=1 \
@@ -522,7 +521,7 @@ qemuguest: hypov.iso $(GUEST_IMG)
 	    -serial stdio -monitor none
 
 qemudbg: hypov.iso
-	$(Q)$(QEMU64) -serial stdio -monitor none -cdrom $^ -S -s
+	$(Q)$(QEMU64) -accel kvm -cpu host -serial stdio -monitor none -cdrom $^ -S -s
 
 bochs: hypov
 	$(Q)$(BOCHS)
