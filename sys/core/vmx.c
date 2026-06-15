@@ -34,7 +34,7 @@ static uint32_t vmx_adjust_controls(uint32_t requested, uint32_t msr_index)
     uint64_t cap = msr_read(msr_index);
     uint32_t must1 = (uint32_t)(cap & 0xFFFFFFFF); /* forced-1 bits */
     uint32_t may1 = (uint32_t)(cap >> 32);         /* allowed-1 bits */
-    return (requested | must1) & may1;
+    return (requested & may1) | must1;
 }
 
 int vmx_check_support(void)
@@ -66,7 +66,7 @@ int vmx_read_capabilities(struct VmxCapabilities *caps)
 
     /* Compute the adjusted control values we want */
     caps->vc_pin_ctls = vmx_adjust_controls(
-        PIN_EXT_INT_EXITING | PIN_NMI_EXITING, pin_msr);
+        PIN_NMI_EXITING, pin_msr);
 
     caps->vc_proc_ctls = vmx_adjust_controls(
         PROC_RDTSC_EXITING | PROC_HLT_EXITING | PROC_ACTIVATE_SECONDARY, proc_msr);
@@ -160,6 +160,9 @@ int vmx_enable(struct VmxState *state)
     hv_printf(&debug_serial, "VMX: CR4=%x VMXE=%d feature_ctl=%x\n",
               (unsigned)cr4_actual, !!(cr4_actual & CR4_VMXE),
               (unsigned)msr_read(0x3A /* IA32_FEATURE_CONTROL */));
+    hv_printf(&debug_serial, "VMX: CR4_FIXED0=%x CR4_FIXED1=%x\n",
+              (unsigned)msr_read(MSR_IA32_VMX_CR4_FIXED0),
+              (unsigned)msr_read(MSR_IA32_VMX_CR4_FIXED1));
     if (!(cr4_actual & CR4_VMXE)) {
         hv_printf(&debug_serial, "VMX: CR4.VMXE not set — nested VMX unavailable\n");
         hv_printf(display, "VMX: CR4.VMXE not set\n");
@@ -213,7 +216,14 @@ static void vmx_ops_run_guest(void)
     }
     vmcs_init(&vmx_state);
     hv_printf(&debug_serial, "VMX: launching guest\n");
-    vmx_launch();
+    if (vmx_launch() != 0) {
+        uint32_t err = (uint32_t)msr_read(0x440);
+        hv_printf(&debug_serial, "VMX: VMLAUNCH failed, instr error=%u\n", err);
+        hv_printf(display, "VMX: VMLAUNCH failed, instr error=%u\n", err);
+    } else {
+        /* VMLAUNCH succeeded and then a VM exit occurred */
+        hv_printf(&debug_serial, "VMX: guest VM exit (launch returned)\n");
+    }
 }
 
 /* Zero-initialized (.bss) — filled at runtime by vmx_backend_init()

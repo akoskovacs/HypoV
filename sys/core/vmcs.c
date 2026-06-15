@@ -171,7 +171,7 @@ static void vmcs_write_guest_state(struct VmxCapabilities *caps)
     vmx_write(VMCS_GUEST_GDTR_BASE, 0);
     vmx_write(VMCS_GUEST_GDTR_LIMIT, 0xFFFF);
     vmx_write(VMCS_GUEST_IDTR_BASE, 0);
-    vmx_write(VMCS_GUEST_RFLAGS, 0x2);
+    vmx_write(VMCS_GUEST_RFLAGS, 0x202); /* IF=1 + reserved bit 1 */
 
     vmx_write(VMCS_GUEST_IA32_SYSENTER_CS, 0);
     vmx_write(VMCS_GUEST_IA32_SYSENTER_ESP, 0);
@@ -218,11 +218,13 @@ static void vmcs_write_controls(struct VmxCapabilities *caps)
     vmx_write(VMCS_CR3_TARGET2, 0);
     vmx_write(VMCS_CR3_TARGET3, 0);
 
-    /* CR0/CR4 masks: don't intercept guest changes to most bits */
+    /* CR0 mask: don't intercept CR0 writes */
     vmx_write(VMCS_CR0_GUEST_HOST_MASK, 0);
-    vmx_write(VMCS_CR4_GUEST_HOST_MASK, 0);
     vmx_write(VMCS_CR0_READ_SHADOW, 0);
-    vmx_write(VMCS_CR4_READ_SHADOW, 0);
+
+    /* CR4 mask: intercept VMXE changes — FIXED0 requires VMXE=1 in VMX non-root */
+    vmx_write(VMCS_CR4_GUEST_HOST_MASK, CR4_VMXE);
+    vmx_write(VMCS_CR4_READ_SHADOW, CR4_VMXE);
 
     /* TSC offset: 0 — Phase 4 will handle RDTSC exits */
     vmx_write(VMCS_TSC_OFFSET, 0);

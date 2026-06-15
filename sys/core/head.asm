@@ -17,6 +17,10 @@ hv_entry_64:
     cli
     xchg bx, bx ; Bochs
     lea rsp, [rel hv_stack_64+CONFIG_SZ_HV_STACK]
+    ; Quick serial test: write 'A' to COM1 (0x3F8)
+    mov  dx, 0x3F8
+    mov  al, 'A'
+    out  dx, al
     ; Operating systems usually clear the RDI register
     cmp rdi, 0
     je os_error_stub
